@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TecOS</title>
+<meta name="theme-color" content="#1b2133">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="TecOS">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: app de uma coluna para celular, barra superior escura, navegação inferior fixa com botão central de nova OS. */
+:root{
+  --bg:#f5f7f9; --surface:#ffffff; --fg:#121a2b; --muted:#5d6878; --line:#dbe1e8;
+  --bar:#1b2133; --bar-fg:#e9edf3; --bar-muted:#8c96a8;
+  --accent:#4fb784; --accent-ink:#0f3a26; --accent-text:#2d7f57; --accent-soft:#e3f4eb;
+  --s-aberta:#e39b2f; --s-aberta-bg:#fdf3e2; --s-manut:#4a80e8; --s-manut-bg:#e8effd;
+  --s-pecas:#8a5ce8; --s-pecas-bg:#f0eafd; --s-concl:#3fa66f; --s-concl-bg:#e3f4eb;
+  --p-baixa:#5d6878; --p-media:#2f6fd0; --p-alta:#c46d10; --p-urg:#c4303f; --p-urg-bg:#fdecee;
+  --chip-on:#121a2b; --chip-on-fg:#ffffff;
+  --f-display:"Outfit",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1420; --surface:#171e2d; --fg:#e8ecf2; --muted:#98a3b5; --line:#2a3346;
+  --bar:#0a0e17; --bar-fg:#e9edf3; --bar-muted:#7f8a9d;
+  --accent:#4fb784; --accent-ink:#06261a; --accent-text:#6fd3a0; --accent-soft:#163327;
+  --s-aberta-bg:#3a2a12; --s-manut-bg:#17284a; --s-pecas-bg:#2a1f4a; --s-concl-bg:#143224;
+  --p-baixa:#98a3b5; --p-media:#7aa6f2; --p-alta:#f0a24a; --p-urg:#ff7a86; --p-urg-bg:#3e1a20;
+  --chip-on:#e8ecf2; --chip-on-fg:#0f1420; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1420; --surface:#171e2d; --fg:#e8ecf2; --muted:#98a3b5; --line:#2a3346;
+  --bar:#0a0e17; --bar-fg:#e9edf3; --bar-muted:#7f8a9d;
+  --accent:#4fb784; --accent-ink:#06261a; --accent-text:#6fd3a0; --accent-soft:#163327;
+  --s-aberta-bg:#3a2a12; --s-manut-bg:#17284a; --s-pecas-bg:#2a1f4a; --s-concl-bg:#143224;
+  --p-baixa:#98a3b5; --p-media:#7aa6f2; --p-alta:#f0a24a; --p-urg:#ff7a86; --p-urg-bg:#3e1a20;
+  --chip-on:#e8ecf2; --chip-on-fg:#0f1420; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-display);font-size:15px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bar)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bar);color:var(--bar-fg)}
+.top-in{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px;padding-block:12px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.logo{width:38px;height:38px;border-radius:11px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink)}
+.brand{font-weight:800;font-size:22px;letter-spacing:-.02em}
+.brand b{color:var(--accent)}
+.sync{margin-left:auto;font-size:12px;color:var(--bar-muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bar-muted)}
+.dot.on{background:var(--accent)}
+
+main{max-width:760px;margin:0 auto;padding-block:20px 120px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-text)}
+h1{font-size:30px;line-height:1.1;font-weight:800;letter-spacing:-.03em;margin:4px 0 6px;text-wrap:balance}
+h2{font-size:17px;font-weight:700;margin:0 0 12px}
+.lead{color:var(--muted);margin:0 0 16px;max-width:60ch}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 16px;font-weight:600;display:inline-flex;gap:8px;align-items:center}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.danger{color:var(--p-urg);border-color:var(--p-urg)}
+.btn.full{width:100%;justify-content:center;padding:14px;font-size:17px}
+.btn:disabled{opacity:.5;cursor:default}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;text-align:left}
+.tile .k{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:6px;align-items:center}
+.tile .v{font-size:34px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:4px}
+.tile .v.sm{font-size:24px}
+.tile .h{font-size:12px;color:var(--muted)}
+button.tile:hover{border-color:var(--accent)}
+.sd{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-weight:500;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--chip-on);color:var(--chip-on-fg);border-color:var(--chip-on)}
+.search{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:12px 14px;font-size:16px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;text-align:left;width:100%;display:grid;gap:6px}
+.card:hover{border-color:var(--accent)}
+.card .t{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.num{font-family:var(--f-mono);font-size:13px;color:var(--muted)}
+.card .eq{font-size:18px;font-weight:700;line-height:1.2}
+.card .ds{color:var(--muted);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.card .b{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.timer{margin-left:auto;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--fg)}
+
+.field{display:grid;gap:6px}
+.field label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field label i{color:var(--p-urg);font-style:normal}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:11px 12px;font-size:16px}
+.field textarea{min-height:92px;resize:vertical}
+fieldset{border:1px solid var(--line);border-radius:18px;padding:16px;margin:0;background:var(--surface);display:grid;gap:14px;min-width:0}
+legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
+.two{display:grid;gap:14px;grid-template-columns:1fr}
+@media (min-width:560px){.two{grid-template-columns:1fr 1fr}}
+.elapsed{font-family:var(--f-mono);font-size:22px;font-weight:700}
+.savebar{position:sticky;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:5}
+
+.bars{display:grid;gap:8px}
+.barrow{display:grid;grid-template-columns:minmax(0,38%) 1fr auto;gap:10px;align-items:center;font-size:14px}
+.barrow span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.bartrack{height:14px;background:var(--bg);border-radius:6px;overflow:hidden}
+.barfill{height:100%;background:var(--fg);border-radius:6px}
+.barrow b{font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.chart{width:100%;height:auto;display:block}
+.donutwrap{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
+@media (max-width:380px){.donutwrap{grid-template-columns:1fr}}
+
+.group{display:grid;gap:4px}
+.group .gh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.group .gl{font-size:13px;color:var(--muted)}
+.cnt{flex:none;background:var(--p-urg-bg);color:var(--p-urg);font-weight:800;border-radius:10px;padding:4px 10px;font-variant-numeric:tabular-nums}
+.gitem{display:flex;gap:8px;align-items:center;padding:9px 0;border-top:1px solid var(--line);text-align:left;background:none;border-left:0;border-right:0;border-bottom:0;width:100%}
+.gitem span.d{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.empty{text-align:center;color:var(--muted);padding:28px 12px;border:1px dashed var(--line);border-radius:16px}
+.note{font-size:13px;color:var(--muted);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.drop{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.drop label{display:grid;place-items:center;gap:8px;text-align:center;border-radius:18px;padding:26px 10px;font-weight:600;font-size:17px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.drop label.dark{background:var(--bar);color:var(--bar-fg);border-color:var(--bar)}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.link{background:none;border:0;color:var(--fg);text-decoration:underline;font-weight:500;padding:6px}
+.preview{max-height:260px;border-radius:12px;border:1px solid var(--line);object-fit:contain;width:100%;background:var(--bg)}
+
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--bar);padding-bottom:env(safe-area-inset-bottom,0px);
+  padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.nav-in{max-width:760px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);align-items:end;height:72px}
+.nav button{background:none;border:0;color:var(--bar-muted);display:grid;justify-items:center;gap:3px;font-size:12px;padding:10px 0}
+.nav button[aria-current="page"]{color:var(--accent)}
+.nav .plus{align-self:center;justify-self:center;width:64px;height:64px;border-radius:50%;background:var(--accent);color:var(--accent-ink);border:5px solid var(--bar);margin-top:-30px;padding:0;display:grid;place-items:center}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;z-index:40;max-width:calc(100% - 32px)}
+.confirm{display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--p-urg-bg);border-radius:12px;padding:10px 12px;color:var(--p-urg);font-weight:600}
+svg text{fill:var(--muted);font-family:var(--f-display);font-size:11px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+html,body{margin:0}
+[hidden]{display:none!important}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px)}
+.login{max-width:400px;margin:8vh auto 0;display:grid;gap:14px}
+.who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px;color:var(--bar-muted);min-width:0}
+.who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
+.who button{background:none;border:1px solid var(--bar-muted);color:var(--bar-fg);border-radius:8px;padding:4px 10px;font-size:12px}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="top-in">
+  <div class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+  <div class="brand">Tec<b>OS</b></div>
+  <div class="who" id="who" hidden><span id="whoemail"></span><button id="logout">Sair</button></div>
+</div></header>
+
+<main id="app"></main>
+
+<nav class="nav" aria-label="Navegação"><div class="nav-in">
+  <button data-go="dashboard"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Painel</button>
+  <button data-go="ordens"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 2h6v4H9zM9 11h6M9 15h6"/></svg>Ordens</button>
+  <button class="plus" data-go="nova" aria-label="Cadastrar OS"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+  <button data-go="digitalizar"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2M7 12h10"/></svg>Digitalizar</button>
+  <button data-go="recorrentes"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>Recorrentes</button>
+</div></nav>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+</body>
+</html>
+<script src="config.js"></script>
+</body>
+</html>
+<script>
+const STATUS = [
+  {k:"aberta", n:"Aberta", c:"var(--s-aberta)", bg:"var(--s-aberta-bg)"},
+  {k:"manutencao", n:"Em manutenção", c:"var(--s-manut)", bg:"var(--s-manut-bg)"},
+  {k:"pecas", n:"Aguardando peças", c:"var(--s-pecas)", bg:"var(--s-pecas-bg)"},
+  {k:"concluida", n:"Concluída", c:"var(--s-concl)", bg:"var(--s-concl-bg)"},
+];
+const PRIO = [
+  {k:"baixa", n:"Baixa", c:"var(--p-baixa)", bg:"var(--bg)"},
+  {k:"media", n:"Média", c:"var(--p-media)", bg:"var(--s-manut-bg)"},
+  {k:"alta", n:"Alta", c:"var(--p-alta)", bg:"var(--s-aberta-bg)"},
+  {k:"urgente", n:"Urgente", c:"var(--p-urg)", bg:"var(--p-urg-bg)"},
+];
+const S = Object.fromEntries(STATUS.map(s=>[s.k,s])), P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
+const app = document.getElementById("app");
+let sb = null, session = null, canWrite = true, ready = false, loginMsg = "";
+let ordens = [];          // {id, ...}
+let view = "dashboard", editId = null, draft = null;
+let filt = {q:"", status:"todas", prio:"todas"}, periodo = 180;
+let confirmDel = false, ocr = {busy:false, img:null, err:""};
+
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+function toLocalInput(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(d)) return ""; return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }
+function fromLocalInput(v){ if(!v) return ""; const d=new Date(v); return isNaN(d)?"":d.toISOString(); }
+function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso); return isNaN(d)?"—":d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function dur(ms){ if(!(ms>0)) return "0m"; const m=Math.floor(ms/60000), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return (d?d+"d ":"")+(d||h?h+"h ":"")+mm+"m"; }
+function elapsed(o){ const ini=new Date(o.recebimento||o.abertura); if(isNaN(ini)) return 0; const fim=o.status==="concluida"&&o.conclusao?new Date(o.conclusao):new Date(); return fim-ini; }
+function pill(def){ return def?`<span class="pill" style="color:${def.c};background:${def.bg}"><span class="sd" style="background:${def.c}"></span>${esc(def.n)}</span>`:""; }
+function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2600); }
+
+/* ---------- banco de dados (Supabase) ---------- */
+const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao"];
+async function carregar(){
+  const {data,error}=await sb.from("ordens").select("*").order("abertura",{ascending:false});
+  if(error){ toast("Não foi possível carregar as OS. Verifique a internet."); return; }
+  ordens=data.map(r=>{const o={id:r.id}; CAMPOS.forEach(k=>o[k]=r[k]??""); return o;}); ready=true;
+  if(view!=="nova"&&view!=="editar"&&!/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"")) render();
+}
+async function saveOS(o){
+  const row={}; CAMPOS.forEach(k=>row[k]=(o[k]===""&&["abertura","recebimento","conclusao","patrimonio","localizacao","diagnostico","servico","pecas"].includes(k))?null:o[k]);
+  row.atualizado_em=new Date().toISOString();
+  const q=editId?sb.from("ordens").update(row).eq("id",editId):sb.from("ordens").insert(row);
+  const {error}=await q; if(error) throw error; await carregar();
+}
+async function deleteOS(id){ const {error}=await sb.from("ordens").delete().eq("id",id); if(error) throw error; await carregar(); }
+
+/* ---------- navegação ---------- */
+function go(v, id){
+  view=v; confirmDel=false;
+  if(v==="nova"){ editId=null; draft=blank(); }
+  if(v==="editar"){ editId=id; const o=ordens.find(x=>x.id===id); draft=o?{...o}:blank(); }
+  document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.go===(v==="editar"?"ordens":v)?"page":"false"));
+  render(); window.scrollTo(0,0);
+}
+document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.go));
+function blank(){ const now=new Date().toISOString(); return {numero:"",patrimonio:"",abertura:now,recebimento:now,setor:"",localizacao:"",equipamento:"",descricao:"",prioridade:"media",status:"aberta",diagnostico:"",servico:"",pecas:"",conclusao:""}; }
+
+/* ---------- telas ---------- */
+function vLogin(){
+  return `<form class="login" id="login" novalidate>
+  <div><div class="eyebrow">Acesso</div><h1>Entrar no TecOS</h1><p class="lead">Use o e-mail e a senha cadastrados pelo administrador.</p></div>
+  <div class="field"><label for="l-email">E-mail</label><input id="l-email" type="email" autocomplete="username" required></div>
+  <div class="field"><label for="l-senha">Senha</label><input id="l-senha" type="password" autocomplete="current-password" required></div>
+  ${loginMsg?`<div class="confirm">${esc(loginMsg)}</div>`:""}
+  <button class="btn pri full" type="submit">Entrar</button>
+  <button class="link" type="button" id="esqueci">Esqueci minha senha</button>
+  </form>`;
+}
+function render(){
+  document.querySelector(".nav").hidden=!session;
+  if(!session){ app.innerHTML=vLogin(); bindLogin(); return; }
+  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec}[view]||vDash;
+  app.innerHTML=f(); bind();
+}
+
+function vDash(){
+  const c=k=>ordens.filter(o=>o.status===k).length;
+  const conc=ordens.filter(o=>o.status==="concluida"&&o.conclusao);
+  const media=conc.length?conc.reduce((a,o)=>a+elapsed(o),0)/conc.length:0;
+  const tile=(k,lbl,v,dot)=>`<button class="tile" data-filter="${k}"><div class="k">${dot?`<span class="sd" style="background:${dot}"></span>`:""}${lbl}</div><div class="v">${v}</div></button>`;
+  return `<div class="stack">
+  <div><div class="eyebrow">Painel</div><h1>Visão geral das OS</h1></div>
+  <div class="row"><button class="btn" id="exp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar planilha</button>
+  <button class="btn pri" data-go="nova">+ Cadastrar OS</button></div>
+  ${!ready?`<div class="empty">Carregando ordens…</div>`:!ordens.length?`<div class="empty"><b>Nenhuma OS cadastrada ainda.</b><br>Toque em <b>+</b> para abrir a primeira ordem de serviço, ou em <b>Digitalizar</b> para ler uma OS em papel.</div>`:`
+  <div class="tiles">
+    ${tile("todas","Total de OS",ordens.length)}
+    ${tile("aberta","Abertas",c("aberta"),S.aberta.c)}
+    ${tile("manutencao","Em manutenção",c("manutencao"),S.manutencao.c)}
+    ${tile("pecas","Aguard. peças",c("pecas"),S.pecas.c)}
+    ${tile("concluida","Concluídas",c("concluida"),S.concluida.c)}
+    <div class="tile"><div class="k">Tempo médio</div><div class="v sm">${dur(media)}</div><div class="h">recebimento → conclusão (${conc.length} OS)</div></div>
+  </div>
+  <div class="panel"><h2>Equipamentos com mais OS</h2>${topEquip()}</div>
+  <div class="panel"><h2>Distribuição por status</h2>${donut()}</div>
+  <div class="panel"><h2>OS recebidas × concluídas por mês</h2>${lineChart()}</div>`}
+  </div>`;
+}
+function topEquip(){
+  const m={}; ordens.forEach(o=>{const k=(o.equipamento||"Sem nome").trim(); m[k]=(m[k]||0)+1;});
+  const arr=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,8); const max=arr[0]?.[1]||1;
+  return `<div class="bars">${arr.map(([n,v])=>`<div class="barrow"><span title="${esc(n)}">${esc(n)}</span><div class="bartrack"><div class="barfill" style="width:${v/max*100}%"></div></div><b>${v}</b></div>`).join("")}</div>`;
+}
+function donut(){
+  const tot=ordens.length; let a=-Math.PI/2; const R=60,r=40,cx=75,cy=75;
+  const segs=STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length; if(!v) return ""; const ang=v/tot*Math.PI*2;
+    if(v===tot) return `<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${s.c}" stroke-width="${R-r}"/>`;
+    const a2=a+ang-0.03, L=ang>Math.PI?1:0;
+    const p=(rad,t)=>[cx+rad*Math.cos(t),cy+rad*Math.sin(t)];
+    const [x1,y1]=p(R,a),[x2,y2]=p(R,a2),[x3,y3]=p(r,a2),[x4,y4]=p(r,a);
+    const d=`M${x1} ${y1}A${R} ${R} 0 ${L} 1 ${x2} ${y2}L${x3} ${y3}A${r} ${r} 0 ${L} 0 ${x4} ${y4}Z`; a+=ang; return `<path d="${d}" fill="${s.c}"/>`;}).join("");
+  return `<div class="donutwrap"><svg class="chart" viewBox="0 0 150 150" role="img" aria-label="Distribuição por status">${segs}<text x="75" y="72" text-anchor="middle" style="font-size:24px;font-weight:800;fill:var(--fg)">${tot}</text><text x="75" y="90" text-anchor="middle">OS</text></svg>
+  <div class="stack" style="gap:8px">${STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length;return `<div class="row" style="justify-content:space-between"><span class="row" style="gap:8px"><span class="sd" style="background:${s.c}"></span>${s.n}</span><b style="font-variant-numeric:tabular-nums">${v}</b></div>`}).join("")}</div></div>`;
+}
+function lineChart(){
+  const now=new Date(), months=[];
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth(),rec:0,con:0});}
+  const idx=iso=>{const d=new Date(iso); if(isNaN(d)) return -1; return months.findIndex(x=>x.y===d.getFullYear()&&x.m===d.getMonth());};
+  ordens.forEach(o=>{const i=idx(o.recebimento||o.abertura); if(i>=0) months[i].rec++; if(o.status==="concluida"&&o.conclusao){const j=idx(o.conclusao); if(j>=0) months[j].con++;}});
+  const mx=Math.max(3,...months.map(m=>Math.max(m.rec,m.con))); const step=Math.ceil(mx/3); const top=step*3;
+  const W=340,H=180,L=28,R=10,T=12,B=28, iw=W-L-R, ih=H-T-B;
+  const X=i=>L+i*iw/11, Y=v=>T+ih-v/top*ih;
+  const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+  const line=(k,c)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round" points="${months.map((m,i)=>X(i)+","+Y(m[k])).join(" ")}"/>`+months.map((m,i)=>`<circle cx="${X(i)}" cy="${Y(m[k])}" r="${i===11?4:2.5}" fill="${c}"/>`).join("");
+  let g=""; for(let v=0;v<=top;v+=step) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;
+  const lbl=months.map((m,i)=>i%2===1||i===11?`<text x="${X(i)}" y="${H-8}" text-anchor="middle">${nm[m.m]}/${String(m.y).slice(2)}</text>`:"").join("");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="OS recebidas e concluídas por mês">${g}${line("rec","var(--fg)")}${line("con","var(--accent)")}${lbl}</svg>
+  <div class="legend" style="margin-top:8px"><span><span class="sd" style="background:var(--fg)"></span>Recebidas</span><span><span class="sd" style="background:var(--accent)"></span>Concluídas</span></div>`;
+}
+
+function filtered(){
+  const q=filt.q.trim().toLowerCase();
+  return ordens.filter(o=>(filt.status==="todas"||o.status===filt.status)&&(filt.prio==="todas"||o.prioridade===filt.prio)&&
+    (!q||[o.numero,o.equipamento,o.patrimonio,o.setor,o.localizacao,o.descricao].some(v=>String(v||"").toLowerCase().includes(q))))
+    .sort((a,b)=>{const open=x=>x.status==="concluida"?1:0; return open(a)-open(b)||new Date(b.abertura||0)-new Date(a.abertura||0);});
+}
+function card(o){
+  return `<button class="card" data-open="${esc(o.id)}">
+    <div class="t"><span class="num">${esc(o.numero||"s/ nº")}</span>${pill(S[o.status])}</div>
+    <div class="eq">${esc(o.equipamento||"Equipamento não informado")}</div>
+    ${o.descricao?`<div class="ds">${esc(o.descricao)}</div>`:""}
+    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer">⏱ ${dur(elapsed(o))}</span></div>
+  </button>`;
+}
+function vList(){
+  const list=filtered();
+  const chip=(grp,k,n)=>`<button class="chip" data-f="${grp}" data-v="${k}" aria-pressed="${filt[grp]===k}">${n}</button>`;
+  return `<div class="stack">
+  <div><div class="eyebrow">Consulta</div><h1>Ordens de serviço</h1></div>
+  <input class="search" id="q" type="search" placeholder="Buscar nº, equipamento, patrimônio, setor…" value="${esc(filt.q)}">
+  <div class="chips">${chip("status","todas","Todas")}${STATUS.map(s=>chip("status",s.k,s.n)).join("")}</div>
+  <div class="chips">${chip("prio","todas","Qualquer prioridade")}${PRIO.map(p=>chip("prio",p.k,p.n)).join("")}</div>
+  <div class="lead" style="margin:0">${list.length} OS encontrada(s)</div>
+  ${!ready?`<div class="empty">Carregando ordens…</div>`:list.length?list.map(card).join(""):`<div class="empty">${ordens.length?"Nenhuma OS com esses filtros.":"Nenhuma OS cadastrada ainda. Toque em <b>+</b> para abrir a primeira."}</div>`}
+  </div>`;
+}
+
+function vForm(){
+  const o=draft, ed=view==="editar";
+  const f=(id,lbl,req,type="text",extra="")=>`<div class="field"><label for="f-${id}">${lbl}${req?" <i>*</i>":""}</label><input id="f-${id}" name="${id}" type="${type}" value="${esc(type==="datetime-local"?toLocalInput(o[id]):o[id])}" ${extra}></div>`;
+  const t=(id,lbl,req)=>`<div class="field"><label for="f-${id}">${lbl}${req?" <i>*</i>":""}</label><textarea id="f-${id}" name="${id}">${esc(o[id])}</textarea></div>`;
+  const chips=(grp,defs)=>`<div class="chips" style="flex-wrap:wrap">${defs.map(d=>`<button type="button" class="chip" data-set="${grp}" data-v="${d.k}" aria-pressed="${o[grp]===d.k}">${d.n}</button>`).join("")}</div>`;
+  return `<form class="stack" id="form" novalidate>
+  <div><button type="button" class="link" data-go="${ed?"ordens":"dashboard"}" style="padding-left:0">← Voltar</button>
+  <h1>${ed?"OS "+esc(o.numero||""):"Nova ordem de serviço"}</h1>${draft._ocr?`<div class="note">Campos preenchidos a partir da foto. Confira cada um antes de salvar.${draft._texto?`<details style="margin-top:6px"><summary>Ver texto lido da foto</summary><pre style="white-space:pre-wrap;font-family:var(--f-mono);font-size:12px">${esc(draft._texto)}</pre></details>`:""}</div>`:""}</div>
+  <fieldset><legend>Identificação</legend>
+    <div class="two">${f("numero","Número da OS",1)}${f("patrimonio","Nº de patrimônio (opcional)",0)}</div>
+    <div class="two">${f("abertura","Data de abertura",1,"datetime-local")}${f("recebimento","Recebimento pelo técnico",1,"datetime-local")}</div>
+    <div class="two">${f("setor","Setor",1,"text",'list="dl-setor"')}${f("localizacao","Localização",0)}</div>
+    ${f("equipamento","Equipamento",1,"text",'list="dl-equip"')}
+    ${t("descricao","Descrição do problema",1)}
+  </fieldset>
+  <datalist id="dl-setor">${[...new Set(ordens.map(x=>x.setor).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+  <datalist id="dl-equip">${[...new Set(ordens.map(x=>x.equipamento).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+  <fieldset><legend>Andamento</legend>
+    <div class="field"><label>Prioridade</label>${chips("prioridade",PRIO)}</div>
+    <div class="field"><label>Status</label>${chips("status",STATUS)}</div>
+    ${t("diagnostico","Diagnóstico técnico")}
+    ${t("servico","Serviço realizado")}
+    ${f("pecas","Peças utilizadas",0,"text",'placeholder="Ex.: sensor SpO2, bateria 12V"')}
+    ${f("conclusao","Data de conclusão",0,"datetime-local")}
+    <div class="field"><label>Tempo decorrido</label><div class="elapsed" id="el">${dur(elapsed(o))}</div></div>
+  </fieldset>
+  <div id="ferr" class="confirm" hidden></div>
+  <div class="savebar"><button class="btn pri full" type="submit" ${!canWrite?"disabled":""}>${ed?"Salvar alterações":"Cadastrar OS"}</button></div>
+  ${ed?(confirmDel?`<div class="confirm">Excluir esta OS de vez? <button type="button" class="btn danger" id="delyes">Excluir</button><button type="button" class="btn" id="delno">Cancelar</button></div>`:`<button type="button" class="btn danger" id="del" ${!canWrite?"disabled":""}>Excluir OS</button>`):""}
+  </form>`;
+}
+
+function vScan(){
+  return `<div class="stack">
+  <div><div class="eyebrow">Digitalização</div><h1>Ler OS em papel</h1></div>
+  <div class="note">Leitura gratuita feita no próprio aparelho. Funciona melhor com OS impressa; letra à mão pode sair com erros. Use boa luz e a folha reta e inteira, e confira os campos antes de salvar.</div>
+  <div class="drop">
+    <label class="dark" for="cam"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Fotografar<input id="cam" type="file" accept="image/*" capture="environment"></label>
+    <label for="pick"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--accent-text)" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>Escolher imagem<input id="pick" type="file" accept="image/*"></label>
+  </div>
+  ${ocr.img?`<img class="preview" src="${ocr.img}" alt="Foto da OS">`:""}
+  ${ocr.busy?`<div class="empty">${esc(ocr.prog||"Lendo a OS…")}</div>`:""}
+  ${ocr.err?`<div class="confirm">${esc(ocr.err)}</div>`:""}
+  <button class="link" data-go="nova">Prefiro cadastrar manualmente</button>
+  </div>`;
+}
+
+function vRec(){
+  const lim=Date.now()-periodo*864e5, g={};
+  ordens.forEach(o=>{const d=new Date(o.recebimento||o.abertura); if(isNaN(d)||d<lim) return;
+    const key=o.patrimonio?.trim()?"p:"+o.patrimonio.trim().toLowerCase():"e:"+(o.equipamento||"").trim().toLowerCase()+"|"+(o.setor||"").trim().toLowerCase();
+    (g[key]=g[key]||[]).push(o);});
+  const groups=Object.values(g).filter(a=>a.length>=2).map(a=>a.sort((x,y)=>new Date(y.recebimento||y.abertura)-new Date(x.recebimento||x.abertura))).sort((a,b)=>b.length-a.length);
+  const per=[[30,"30 dias"],[90,"90 dias"],[180,"6 meses"],[365,"1 ano"]];
+  return `<div class="stack">
+  <div><div class="eyebrow">Análise</div><h1>Falhas recorrentes</h1><p class="lead">Equipamentos com 2 ou mais OS no período, agrupados por patrimônio ou, sem patrimônio, por equipamento + setor.</p></div>
+  <div class="chips">${per.map(([d,n])=>`<button class="chip" data-per="${d}" aria-pressed="${periodo===d}">${n}</button>`).join("")}</div>
+  ${groups.length?groups.map(a=>{const o=a[0], abertas=a.filter(x=>x.status!=="concluida").length;
+    return `<div class="panel group"><div class="gh"><div><h2 style="margin:0">${esc(o.equipamento||"Equipamento")}</h2><div class="gl">${esc([o.setor,o.patrimonio&&"PAT "+o.patrimonio].filter(Boolean).join(" · "))}</div><div class="gl">Última: ${fmtDate(o.recebimento||o.abertura)} · ${abertas} em aberto</div></div><span class="cnt">${a.length}×</span></div>
+    ${a.map(x=>`<button class="gitem" data-open="${esc(x.id)}"><span class="num">${esc(x.numero||"s/ nº")}</span><span class="d">${esc(x.descricao||"")}</span>${pill(S[x.status])}</button>`).join("")}</div>`}).join("")
+  :`<div class="empty">Nenhum equipamento com 2 ou mais OS neste período.</div>`}
+  </div>`;
+}
+
+/* ---------- eventos ---------- */
+function bind(){
+  app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
+  app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>go("editar",b.dataset.open));
+  app.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filt={q:"",status:b.dataset.filter,prio:"todas"}; go("ordens");});
+  app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{filt[b.dataset.f]=b.dataset.v; render();});
+  app.querySelectorAll("[data-per]").forEach(b=>b.onclick=()=>{periodo=+b.dataset.per; render();});
+  const q=document.getElementById("q"); if(q){ q.oninput=()=>{filt.q=q.value; const pos=q.selectionStart; render(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos);}; }
+  const exp=document.getElementById("exp"); if(exp) exp.onclick=exportCSV;
+  const form=document.getElementById("form");
+  if(form){
+    form.querySelectorAll("input,textarea").forEach(el=>el.oninput=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(elapsed(draft));});
+    form.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{draft[b.dataset.set]=b.dataset.v;
+      if(b.dataset.set==="status"&&b.dataset.v==="concluida"&&!draft.conclusao) draft.conclusao=new Date().toISOString();
+      render();});
+    form.onsubmit=async e=>{e.preventDefault();
+      const miss=[["numero","Número da OS"],["abertura","Data de abertura"],["recebimento","Recebimento"],["setor","Setor"],["equipamento","Equipamento"],["descricao","Descrição do problema"]].filter(([k])=>!String(draft[k]||"").trim()).map(x=>x[1]);
+      const err=document.getElementById("ferr");
+      if(miss.length){ err.hidden=false; err.textContent="Preencha: "+miss.join(", ")+"."; err.scrollIntoView({block:"center"}); return; }
+      const dup=ordens.find(x=>x.numero.trim()===draft.numero.trim()&&x.id!==editId);
+      if(dup){ err.hidden=false; err.textContent="Já existe uma OS com o número "+draft.numero+"."; return; }
+      const {_ocr, _texto, ...clean}=draft; const now=new Date().toISOString();
+      const o={...clean};
+      try{ await saveOS(o); toast(editId?"OS atualizada":"OS cadastrada"); go("ordens"); }
+      catch(x){ err.hidden=false; err.textContent=x?.code==="23505"?"Já existe uma OS com o número "+draft.numero+".":"Não foi possível salvar. Verifique a internet e tente de novo."; }
+    };
+    const del=document.getElementById("del"); if(del) del.onclick=()=>{confirmDel=true; render();};
+    const dn=document.getElementById("delno"); if(dn) dn.onclick=()=>{confirmDel=false; render();};
+    const dy=document.getElementById("delyes"); if(dy) dy.onclick=async()=>{try{await deleteOS(editId); toast("OS excluída"); go("ordens");}catch(x){toast("Não foi possível excluir.");}};
+  }
+  ["cam","pick"].forEach(id=>{const i=document.getElementById(id); if(i) i.onchange=()=>i.files[0]&&readPhoto(i.files[0]);});
+}
+
+/* ---------- leitura de foto ---------- */
+async function shrink(file){
+  const img=await new Promise((res,rej)=>{const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=URL.createObjectURL(file);});
+  const sc=Math.min(1,1600/Math.max(img.width,img.height)); const c=document.createElement("canvas");
+  c.width=Math.round(img.width*sc); c.height=Math.round(img.height*sc); c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  return new Promise(r=>c.toBlob(b=>r({blob:b,url:c.toDataURL("image/jpeg",.7)}),"image/jpeg",.85));
+}
+let tessLoad=null;
+function loadTess(){ return tessLoad||(tessLoad=new Promise((res,rej)=>{const sc=document.createElement("script"); sc.src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"; sc.onload=()=>res(window.Tesseract); sc.onerror=rej; document.head.append(sc);})); }
+function extrair(txt){
+  const d=blank(); const lines=txt.split(/\n/).map(l=>l.trim()).filter(Boolean);
+  const pick=(re)=>{ for(const l of lines){ const m=l.match(re); if(m&&m[1]&&m[1].trim()) return m[1].trim(); } return ""; };
+  d.numero=pick(/(?:\bO\.?\s?S\.?|ordem(?: de servi[cç]o)?)\s*(?:n[º°o.]*|:|-)?\s*[:#]?\s*([A-Z0-9][\w\-\/]{1,20})/i);
+  d.patrimonio=pick(/patrim[oô]nio\s*(?:n[º°o.]*)?\s*[:\-]?\s*([\w\-\/]{2,20})/i);
+  d.setor=pick(/setor\s*[:\-]\s*(.+)/i);
+  d.localizacao=pick(/(?:local(?:iza[cç][aã]o)?|sala|leito)\s*[:\-]\s*(.+)/i);
+  d.equipamento=pick(/equipamento\s*[:\-]\s*(.+)/i);
+  d.descricao=pick(/(?:defeito|problema|descri[cç][aã]o|ocorr[eê]ncia)[^:]*[:\-]\s*(.+)/i);
+  const dt=txt.match(/(\d{2})\/(\d{2})\/(\d{2,4})(?:\s+(\d{1,2})[:h](\d{2}))?/);
+  if(dt){ const y=dt[3].length===2?"20"+dt[3]:dt[3]; const x=new Date(+y,+dt[2]-1,+dt[1],+(dt[4]||8),+(dt[5]||0)); if(!isNaN(x)) d.abertura=x.toISOString(); }
+  if(/urgente/i.test(txt)) d.prioridade="urgente";
+  if(!d.descricao) d.descricao="";
+  d.diagnostico=""; d._ocr=true; d._texto=txt.trim();
+  return d;
+}
+async function readPhoto(file){
+  ocr={busy:true,img:null,err:"",prog:"Preparando a leitura…"}; render();
+  try{
+    const {blob,url}=await shrink(file); ocr.img=url; render();
+    const T=await loadTess();
+    const r=await T.recognize(blob,"por",{logger:m=>{ if(m.status==="recognizing text"){ ocr.prog="Lendo a OS… "+Math.round(m.progress*100)+"%"; const e=app.querySelector(".empty"); if(e) e.textContent=ocr.prog; } }});
+    const d=extrair(r.data.text||"");
+    ocr={busy:false,img:null,err:""}; view="nova"; editId=null; draft=d; go2form();
+  }catch(x){
+    ocr.busy=false; ocr.err="Não consegui ler a foto. Verifique a internet, tente outra foto com mais luz ou cadastre manualmente."; render();
+  }
+}
+function go2form(){ document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current","false")); render(); window.scrollTo(0,0); }
+
+/* ---------- exportar ---------- */
+async function exportCSV(){
+  const cols=[["numero","Nº OS"],["patrimonio","Patrimônio"],["abertura","Abertura"],["recebimento","Recebimento"],["setor","Setor"],["localizacao","Localização"],["equipamento","Equipamento"],["descricao","Descrição do problema"],["prioridade","Prioridade"],["status","Status"],["diagnostico","Diagnóstico"],["servico","Serviço realizado"],["pecas","Peças"],["conclusao","Conclusão"],["_tempo","Tempo decorrido"]];
+  const val=(o,k)=>k==="_tempo"?dur(elapsed(o)):k==="status"?S[o.status]?.n:k==="prioridade"?P[o.prioridade]?.n:["abertura","recebimento","conclusao"].includes(k)?(o[k]?fmtDate(o[k]):""):o[k];
+  const cell=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  const csv="﻿"+[cols.map(c=>cell(c[1])).join(";"),...ordens.map(o=>cols.map(c=>cell(val(o,c[0]))).join(";"))].join("\r\n");
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  a.download=`TecOS_${new Date().toISOString().slice(0,10)}.csv`; document.body.append(a); a.click(); a.remove();
+}
+
+/* ---------- login ---------- */
+function bindLogin(){
+  const f=document.getElementById("login");
+  f.onsubmit=async e=>{ e.preventDefault(); const email=document.getElementById("l-email").value.trim(), senha=document.getElementById("l-senha").value;
+    if(!email||!senha){ loginMsg="Informe e-mail e senha."; render(); return; }
+    const b=f.querySelector("[type=submit]"); b.disabled=true; b.textContent="Entrando…";
+    const {error}=await sb.auth.signInWithPassword({email,password:senha});
+    if(error){ loginMsg="E-mail ou senha incorretos."; render(); document.getElementById("l-email").value=email; } };
+  document.getElementById("esqueci").onclick=async()=>{ const email=document.getElementById("l-email").value.trim();
+    if(!email){ loginMsg="Digite seu e-mail acima e toque de novo em Esqueci minha senha."; render(); return; }
+    await sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname});
+    loginMsg="Se o e-mail estiver cadastrado, você vai receber um link para criar nova senha."; render(); document.getElementById("l-email").value=email; };
+}
+document.getElementById("logout").onclick=()=>sb.auth.signOut();
+
+/* ---------- início ---------- */
+(async()=>{
+  const cfg=window.TECOS_CONFIG||{};
+  if(!cfg.SUPABASE_URL||cfg.SUPABASE_URL.includes("COLE_AQUI")){ app.innerHTML=`<div class="empty" style="margin-top:10vh"><b>Falta configurar o banco de dados.</b><br>Preencha o arquivo config.js com o endereço e a chave do Supabase.</div>`; document.querySelector(".nav").hidden=true; return; }
+  sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_KEY);
+  sb.auth.onAuthStateChange(async (ev,sess)=>{
+    if(ev==="PASSWORD_RECOVERY"){ const nova=window.prompt("Digite sua nova senha (mínimo 6 caracteres):"); if(nova){ const {error}=await sb.auth.updateUser({password:nova}); toast(error?"Não foi possível trocar a senha.":"Senha alterada."); } }
+    const had=!!session; session=sess; loginMsg="";
+    const who=document.getElementById("who"); who.hidden=!session; document.getElementById("whoemail").textContent=session?.user?.email||"";
+    if(session&&!had){ ready=false; go("dashboard"); carregar(); }
+    if(!session){ ordens=[]; render(); }
+  });
+  const {data}=await sb.auth.getSession(); if(!data.session) render();
+  window.addEventListener("focus",()=>session&&carregar());
+})();
+setInterval(()=>{ if(session) carregar(); },60000);
+
+</script>
+</body>
+</html>
