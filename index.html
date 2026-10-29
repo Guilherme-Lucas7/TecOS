@@ -102,7 +102,11 @@ button.tile:hover{border-color:var(--accent)}
 .card .b{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
 .dates{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.timer.old{border-color:var(--p-urg);color:var(--p-urg)}
+.atraso{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;text-align:left;width:100%;
+  background:var(--p-urg-bg);color:var(--p-urg);border:1px solid var(--p-urg);border-radius:16px;padding:14px 16px;font:inherit}
+.atraso small{color:var(--fg);opacity:.8;font-size:13px}
+.atraso .go{font-weight:700;white-space:nowrap}
+.timer.old{background:var(--p-urg-bg);border-color:var(--p-urg);color:var(--p-urg)}
 .timer{margin-left:auto;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--fg)}
 
 .field{display:grid;gap:6px}
@@ -142,13 +146,25 @@ legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-tr
 .zoom .barrow{font-size:16px;grid-template-columns:minmax(0,45%) 1fr auto}
 .zoom .barrow span:first-child{white-space:normal}
 .zoom .bartrack{height:20px}
+.passos{margin:0;padding-left:20px;display:grid;gap:6px}
+.topico{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.topico code{font-family:var(--f-mono);font-size:15px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;flex:1;min-width:0;overflow-wrap:anywhere;user-select:all}
+.hint{font-size:13px;color:var(--muted);margin:0}
+.numsuf{display:flex;align-items:center;gap:8px}
+.numsuf input{flex:1}
+.numsuf span{color:var(--muted);font-size:14px;white-space:nowrap}
+.check{display:flex;gap:10px;align-items:center;font-weight:600}
+.check input{width:22px;height:22px;accent-color:var(--accent)}
 .mtab{overflow-x:auto;margin-top:12px}
 .mtab table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 .mtab th,.mtab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right}
 .mtab th:first-child,.mtab td:first-child{text-align:left}
 .mtab th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.donutwrap{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
-@media (max-width:380px){.donutwrap{grid-template-columns:1fr}}
+.donutwrap{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;align-items:center}
+.lg{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.lg .lgn{min-width:0;line-height:1.25}
+.lg b{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+@media (max-width:340px){.donutwrap{grid-template-columns:1fr;justify-items:center}.donutwrap svg{max-width:150px}}
 
 .group{display:grid;gap:4px}
 .group .gh{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
@@ -181,7 +197,9 @@ html,body{margin:0}
 img{max-width:100%}
 :root{padding-top:env(safe-area-inset-top,0px)}
 .login{max-width:400px;margin:8vh auto 0;display:grid;gap:14px}
-.tema{margin-left:auto;background:none;border:1px solid var(--bar-muted);color:var(--bar-fg);border-radius:8px;width:32px;height:28px;display:grid;place-items:center;padding:0;flex:none}
+.sino{margin-left:auto;background:none;border:1px solid var(--bar-muted);color:var(--bar-fg);border-radius:8px;width:32px;height:28px;display:grid;place-items:center;padding:0;flex:none}
+.sino[aria-current="page"]{border-color:var(--accent);color:var(--accent)}
+.tema{background:none;border:1px solid var(--bar-muted);color:var(--bar-fg);border-radius:8px;width:32px;height:28px;display:grid;place-items:center;padding:0;flex:none}
 .who{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--bar-muted);min-width:0}
 .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
 .who button{background:none;border:1px solid var(--bar-muted);color:var(--bar-fg);border-radius:8px;padding:4px 10px;font-size:12px}
@@ -195,7 +213,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <header class="top"><div class="top-in">
   <div class="logo" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
   <div class="brand">Tec<b>OS</b></div>
-  <button class="tema" id="tema" aria-label="Alternar tema claro ou escuro" title="Tema claro/escuro"></button><div class="who" id="who" hidden><span id="whoemail"></span><button id="logout">Sair</button></div>
+  <button class="sino" id="sino" hidden aria-label="Alertas de OS atrasadas" title="Alertas"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg></button><button class="tema" id="tema" aria-label="Alternar tema claro ou escuro" title="Tema claro/escuro"></button><div class="who" id="who" hidden><span id="whoemail"></span><button id="logout">Sair</button></div>
 </div></header>
 
 <main id="app"></main>
@@ -211,7 +229,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=5"></script>
+<script src="config.js?v=6"></script>
 </body>
 </html>
 <script>
@@ -230,6 +248,8 @@ const PRIO = [
 const S = Object.fromEntries(STATUS.map(s=>[s.k,s])), P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
 const app = document.getElementById("app");
 let sb = null, session = null, canWrite = true, ready = false, loginMsg = "", okOld = false;
+const ALERTA_PADRAO={ativo:true,topico:"",horas_urgente:120,horas_alta:120,horas_media:120,horas_baixa:120,repetir_horas:24,hora_inicio:7,hora_fim:22};
+let alerta={...ALERTA_PADRAO}, alertaPronto=false, alertaMsg="";
 let ordens = [];          // {id, ...}
 let view = "dashboard", editId = null, draft = null;
 let filt = {q:"", status:"todas", prio:"todas"}, periodo = 180;
@@ -241,12 +261,18 @@ function toLocalInput(iso){ if(!iso) return ""; const d=new Date(iso); if(isNaN(
 function fromLocalInput(v){ if(!v) return ""; const d=new Date(v); return isNaN(d)?"":d.toISOString(); }
 function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso); return isNaN(d)?"—":d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 function dur(ms){ if(!(ms>0)) return "0m"; const m=Math.floor(ms/60000), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return (d?d+"d ":"")+(d||h?h+"h ":"")+mm+"m"; }
+function limiteHoras(o){ return ({urgente:alerta.horas_urgente,alta:alerta.horas_alta,baixa:alerta.horas_baixa})[o.prioridade]||alerta.horas_media; }
+function atrasada(o){ return o.status!=="concluida"&&elapsed(o)>limiteHoras(o)*36e5; }
 function elapsed(o){ const ini=new Date(o.recebimento||o.abertura); if(isNaN(ini)) return 0; const fim=o.status==="concluida"&&o.conclusao?new Date(o.conclusao):new Date(); return fim-ini; }
 function pill(def){ return def?`<span class="pill" style="color:${def.c};background:${def.bg}"><span class="sd" style="background:${def.c}"></span>${esc(def.n)}</span>`:""; }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2600); }
 
 /* ---------- banco de dados (Supabase) ---------- */
 const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao"];
+async function carregarAlerta(){
+  const {data,error}=await sb.from("alertas_config").select("*").eq("id",1).maybeSingle();
+  if(!error&&data){ alerta={...ALERTA_PADRAO,...data}; alertaPronto=true; } else alertaPronto=false;
+}
 async function carregar(){
   const {data,error}=await sb.from("ordens").select("*").order("abertura",{ascending:false});
   if(error){ toast("Não foi possível carregar as OS. Verifique a internet."); return; }
@@ -287,7 +313,8 @@ function vLogin(){
 function render(){
   document.querySelector(".nav").hidden=!session;
   if(!session){ app.innerHTML=vLogin(); bindLogin(); return; }
-  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec}[view]||vDash;
+  document.getElementById("sino")?.setAttribute("aria-current",view==="alertas"?"page":"false");
+  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec, alertas:vAlertas}[view]||vDash;
   app.innerHTML=f(); bind();
 }
 
@@ -301,6 +328,7 @@ function vDash(){
   <div class="row"><button class="btn" id="exp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar planilha</button>
   <button class="btn pri" data-go="nova">+ Cadastrar OS</button></div>
   ${!ready?`<div class="empty">Carregando ordens…</div>`:!ordens.length?`<div class="empty"><b>Nenhuma OS cadastrada ainda.</b><br>Toque em <b>+</b> para abrir a primeira ordem de serviço, ou em <b>Digitalizar</b> para ler uma OS em papel.</div>`:`
+  ${(()=>{const n=ordens.filter(atrasada).length; return n?`<button class="atraso" data-filter="atrasadas"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span><b>${n} OS atrasada${n>1?"s":""}</b><br><small>Passaram do prazo da prioridade sem ser finalizadas</small></span><span class="go">Ver →</span></button>`:""})()}
   <div class="tiles">
     ${tile("todas","Total de OS",ordens.length)}
     ${tile("aberta","Abertas",c("aberta"),S.aberta.c)}
@@ -328,7 +356,7 @@ function donut(big){
     const [x1,y1]=p(R,a),[x2,y2]=p(R,a2),[x3,y3]=p(r,a2),[x4,y4]=p(r,a);
     const d=`M${x1} ${y1}A${R} ${R} 0 ${L} 1 ${x2} ${y2}L${x3} ${y3}A${r} ${r} 0 ${L} 0 ${x4} ${y4}Z`; a+=ang; return `<path d="${d}" fill="${s.c}"/>`;}).join("");
   return `<div class="donutwrap"><svg class="chart" viewBox="0 0 150 150" role="img" aria-label="Distribuição por status">${segs}<text x="75" y="72" text-anchor="middle" style="font-size:24px;font-weight:800;fill:var(--fg)">${tot}</text><text x="75" y="90" text-anchor="middle">OS</text></svg>
-  <div class="stack" style="gap:8px">${STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length;return `<div class="row" style="justify-content:space-between"><span class="row" style="gap:8px"><span class="sd" style="background:${s.c}"></span>${s.n}</span><b style="font-variant-numeric:tabular-nums">${v}${big&&tot?` <span style="color:var(--muted);font-weight:500">(${Math.round(v/tot*100)}%)</span>`:""}</b></div>`}).join("")}</div></div>`;
+  <div class="stack" style="gap:8px">${STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length;return `<div class="lg"><span class="sd" style="background:${s.c}"></span><span class="lgn">${s.n}</span><b>${v}${big&&tot?` <span style="color:var(--muted);font-weight:500">(${Math.round(v/tot*100)}%)</span>`:""}</b></div>`}).join("")}</div></div>`;
 }
 function lineChart(big){
   const now=new Date(), months=[];
@@ -349,7 +377,7 @@ function lineChart(big){
 
 function filtered(){
   const q=filt.q.trim().toLowerCase();
-  return ordens.filter(o=>(filt.status==="todas"||o.status===filt.status)&&(filt.prio==="todas"||o.prioridade===filt.prio)&&
+  return ordens.filter(o=>(filt.status==="todas"||o.status===filt.status||(filt.status==="atrasadas"&&atrasada(o)))&&(filt.prio==="todas"||o.prioridade===filt.prio)&&
     (!q||[o.numero,o.equipamento,o.patrimonio,o.setor,o.localizacao,o.descricao].some(v=>String(v||"").toLowerCase().includes(q))))
     .sort((a,b)=>{const open=x=>x.status==="concluida"?1:0; return open(a)-open(b)||new Date(b.abertura||0)-new Date(a.abertura||0);});
 }
@@ -358,7 +386,7 @@ function card(o){
     <div class="t"><span class="num">${esc(o.numero||"s/ nº")}</span>${pill(S[o.status])}</div>
     <div class="eq">${esc(o.equipamento||"Equipamento não informado")}</div>
     ${o.descricao?`<div class="ds">${esc(o.descricao)}</div>`:""}
-    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${elapsed(o)>60*864e5&&o.status!=="concluida"?" old":""}">⏱ ${dur(elapsed(o))}</span></div>
+    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${atrasada(o)?" old":""}">${atrasada(o)?"Atrasada · ":"⏱ "}${dur(elapsed(o))}</span></div>
     <div class="dates">Recebida ${fmtDate(o.recebimento||o.abertura)}${o.status==="concluida"&&o.conclusao?" · Concluída "+fmtDate(o.conclusao):""}</div>
   </button>`;
 }
@@ -368,7 +396,7 @@ function vList(){
   return `<div class="stack">
   <div><div class="eyebrow">Consulta</div><h1>Ordens de serviço</h1></div>
   <input class="search" id="q" type="search" placeholder="Buscar nº, equipamento, patrimônio, setor…" value="${esc(filt.q)}">
-  <div class="chips">${chip("status","todas","Todas")}${STATUS.map(s=>chip("status",s.k,s.n)).join("")}</div>
+  <div class="chips">${chip("status","todas","Todas")}${chip("status","atrasadas","Atrasadas")}${STATUS.map(s=>chip("status",s.k,s.n)).join("")}</div>
   <div class="chips">${chip("prio","todas","Qualquer prioridade")}${PRIO.map(p=>chip("prio",p.k,p.n)).join("")}</div>
   <div class="lead" style="margin:0">${list.length} OS encontrada(s)</div>
   ${!ready?`<div class="empty">Carregando ordens…</div>`:list.length?list.map(card).join(""):`<div class="empty">${ordens.length?"Nenhuma OS com esses filtros.":"Nenhuma OS cadastrada ainda. Toque em <b>+</b> para abrir a primeira."}</div>`}
@@ -439,6 +467,59 @@ function vRec(){
   </div>`;
 }
 
+/* ---------- alertas ---------- */
+function vAlertas(){
+  const a=alerta, n=ordens.filter(atrasada).length;
+  const num=(k,l,min,max,suf)=>`<div class="field"><label for="a-${k}">${l}</label><div class="numsuf"><input id="a-${k}" data-a="${k}" type="number" inputmode="numeric" min="${min}" max="${max}" value="${esc(a[k])}"><span>${suf}</span></div></div>`;
+  const dias=(k,l)=>`<div class="field"><label for="a-${k}">${l}</label><div class="numsuf"><input id="a-${k}" data-d="${k}" type="number" inputmode="decimal" step="0.5" min="0.5" max="83" value="${+(a[k]/24).toFixed(1)}"><span>dias</span></div></div>`;
+  if(!alertaPronto) return `<div class="stack">
+  <div><div class="eyebrow">Notificações</div><h1>Alertas de OS atrasadas</h1></div>
+  <div class="empty"><b>Falta ativar os alertas no banco de dados.</b><br>Rode o comando <b>alertas.sql</b> no Supabase (SQL Editor) e abra esta tela de novo.</div></div>`;
+  return `<div class="stack">
+  <div><div class="eyebrow">Notificações</div><h1>Alertas de OS atrasadas</h1>
+  <p class="lead">Quando uma OS passa do prazo sem ser finalizada, chega uma notificação no seu celular pelo app <b>ntfy</b>. O aviso se repete no intervalo escolhido até a OS ser concluída. ${n?`Agora há <b>${n}</b> OS atrasada${n>1?"s":""}.`:"Agora nenhuma OS está atrasada."}</p></div>
+  <fieldset><legend>1 · Receber no celular</legend>
+    <ol class="passos">
+      <li>Instale o app <b>ntfy</b> (App Store ou Google Play). É gratuito e não precisa de cadastro.</li>
+      <li>No ntfy, toque em <b>+</b> e digite o nome do canal abaixo. Deixe o servidor padrão (ntfy.sh).</li>
+      <li>Permita as notificações quando o app pedir e toque em <b>Enviar teste</b> aqui.</li>
+    </ol>
+    <div class="topico"><code id="topico">${esc(a.topico)}</code><button type="button" class="btn" id="copiar">Copiar</button></div>
+    <p class="hint">Só quem souber esse nome recebe os alertas. Não compartilhe fora da equipe.</p>
+    <button type="button" class="btn" id="teste">Enviar teste</button>
+  </fieldset>
+  <fieldset><legend>2 · Prazo por prioridade</legend>
+    <p class="hint" style="margin:0">Tempo desde o recebimento até a OS ser considerada atrasada. Use 0,5 para 12 horas.</p>
+    <div class="two">${dias("horas_urgente","Urgente")}${dias("horas_alta","Alta")}</div>
+    <div class="two">${dias("horas_media","Média")}${dias("horas_baixa","Baixa")}</div>
+  </fieldset>
+  <fieldset><legend>3 · Quando avisar</legend>
+    ${dias("repetir_horas","Repetir o aviso da mesma OS a cada")}
+    <div class="two">${num("hora_inicio","Avisar a partir das",0,23,"h")}${num("hora_fim","Até as",1,24,"h")}</div>
+    <label class="check"><input type="checkbox" id="a-ativo" ${a.ativo?"checked":""}> Alertas ligados</label>
+  </fieldset>
+  ${alertaMsg?`<div class="note">${esc(alertaMsg)}</div>`:""}
+  <button type="button" class="btn pri full" id="salvarAlerta">Salvar alertas</button>
+  </div>`;
+}
+function bindAlertas(){
+  const c=document.getElementById("copiar"); if(!c) return;
+  c.onclick=async()=>{ const t=alerta.topico; try{ await navigator.clipboard.writeText(t); toast("Nome do canal copiado"); }catch(e){ const r=document.createRange(); r.selectNodeContents(document.getElementById("topico")); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(r); toast("Texto selecionado: copie pelo menu"); } };
+  document.getElementById("teste").onclick=async e=>{ e.target.disabled=true; const {error}=await sb.rpc("tecos_alerta_teste"); e.target.disabled=false;
+    toast(error?"Não foi possível enviar o teste.":"Teste enviado. Confira o celular."); };
+  document.getElementById("salvarAlerta").onclick=async()=>{
+    const v={}; let ruim="";
+    app.querySelectorAll("[data-a]").forEach(i=>{ const n=parseInt(i.value,10); if(isNaN(n)||n<+i.min||n>+i.max) ruim=i.closest(".field").querySelector("label").textContent; v[i.dataset.a]=n; });
+    app.querySelectorAll("[data-d]").forEach(i=>{ const n=parseFloat(String(i.value).replace(",",".")); if(isNaN(n)||n<0.5||n>83) ruim=i.closest(".field").querySelector("label").textContent; v[i.dataset.d]=Math.round(n*24); });
+    if(ruim){ alertaMsg="Valor inválido em: "+ruim+"."; render(); return; }
+    if(v.hora_fim<=v.hora_inicio){ alertaMsg="O horário final precisa ser depois do inicial."; render(); return; }
+    v.ativo=document.getElementById("a-ativo").checked;
+    const {error}=await sb.from("alertas_config").update(v).eq("id",1);
+    if(error){ alertaMsg="Não foi possível salvar. Verifique a internet."; render(); return; }
+    alerta={...alerta,...v}; alertaMsg=""; toast("Alertas salvos"); render();
+  };
+}
+
 /* ---------- gráfico ampliado ---------- */
 let zoomAtual=null;
 function abrirZoom(k){
@@ -490,6 +571,7 @@ function bind(){
     const dn=document.getElementById("delno"); if(dn) dn.onclick=()=>{confirmDel=false; render();};
     const dy=document.getElementById("delyes"); if(dy) dy.onclick=async()=>{try{await deleteOS(editId); toast("OS excluída"); go("ordens");}catch(x){toast("Não foi possível excluir.");}};
   }
+  bindAlertas();
   ["cam","pick"].forEach(id=>{const i=document.getElementById(id); if(i) i.onchange=()=>i.files[0]&&readPhoto(i.files[0]);});
 }
 
@@ -560,6 +642,7 @@ const LUA='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="c
 function pintaTema(){ const d=document.documentElement.dataset.theme==="dark"; document.getElementById("tema").innerHTML=d?SOL:LUA; }
 document.getElementById("tema").onclick=()=>{ const n=document.documentElement.dataset.theme==="dark"?"light":"dark"; document.documentElement.dataset.theme=n; try{localStorage.setItem("tecos-tema",n);}catch(e){} pintaTema(); render(); };
 pintaTema();
+document.getElementById("sino").onclick=()=>go("alertas");
 document.getElementById("logout").onclick=()=>sb.auth.signOut();
 
 /* ---------- início ---------- */
@@ -570,8 +653,8 @@ document.getElementById("logout").onclick=()=>sb.auth.signOut();
   sb.auth.onAuthStateChange(async (ev,sess)=>{
     if(ev==="PASSWORD_RECOVERY"){ const nova=window.prompt("Digite sua nova senha (mínimo 6 caracteres):"); if(nova){ const {error}=await sb.auth.updateUser({password:nova}); toast(error?"Não foi possível trocar a senha.":"Senha alterada."); } }
     const had=!!session; session=sess; loginMsg="";
-    const who=document.getElementById("who"); who.hidden=!session; document.getElementById("whoemail").textContent=session?.user?.email||"";
-    if(session&&!had){ ready=false; try{ const c=JSON.parse(localStorage.getItem("tecos-cache-"+session.user.id)||"null"); if(Array.isArray(c)){ ordens=c; ready=true; } }catch(e){} go("dashboard"); carregar(); }
+    const who=document.getElementById("who"); who.hidden=!session; document.getElementById("sino").hidden=!session; document.getElementById("whoemail").textContent=session?.user?.email||"";
+    if(session&&!had){ carregarAlerta().then(()=>{ if(view!=="nova"&&view!=="editar") render(); }); ready=false; try{ const c=JSON.parse(localStorage.getItem("tecos-cache-"+session.user.id)||"null"); if(Array.isArray(c)){ ordens=c; ready=true; } }catch(e){} go("dashboard"); carregar(); }
     if(!session){ ordens=[]; ready=false; try{ Object.keys(localStorage).filter(k=>k.startsWith("tecos-cache-")).forEach(k=>localStorage.removeItem(k)); }catch(e){} render(); }
   });
   const {data}=await sb.auth.getSession(); if(!data.session) render();
