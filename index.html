@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>TecOS</title>
 <script>try{document.documentElement.dataset.theme=localStorage.getItem("tecos-tema")||"dark";}catch(e){document.documentElement.dataset.theme="dark";}</script>
 <meta name="theme-color" content="#1b2133">
@@ -164,6 +164,9 @@ img{max-width:100%}
 .who{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--bar-muted);min-width:0}
 .who span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40vw}
 .who button{background:none;border:1px solid var(--bar-muted);color:var(--bar-fg);border-radius:8px;padding:4px 10px;font-size:12px}
+/* sem zoom ao tocar: toque duplo não amplia e o iPhone não aproxima ao digitar */
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+@supports (-webkit-touch-callout:none){input,select,textarea{font-size:16px!important}}
 </style>
 </head>
 <body>
