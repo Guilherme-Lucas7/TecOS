@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://bnzksklfspgtvexloqka.supabase.co" crossorigin>
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: app de uma coluna para celular, barra superior escura, navegação inferior fixa com botão central de nova OS. */
 :root{
@@ -649,8 +649,20 @@ document.getElementById("logout").onclick=()=>sb.auth.signOut();
 (async()=>{
   const cfg=window.TECOS_CONFIG||{};
   if(!cfg.SUPABASE_URL||cfg.SUPABASE_URL.includes("COLE_AQUI")){ app.innerHTML=`<div class="empty" style="margin-top:10vh"><b>Falta configurar o banco de dados.</b><br>Preencha o arquivo config.js com o endereço e a chave do Supabase.</div>`; document.querySelector(".nav").hidden=true; return; }
+  // abre na hora com a última cópia das OS enquanto confere a conta e busca o que mudou
+  let provisoria=false;
+  try{
+    const ref=new URL(cfg.SUPABASE_URL).hostname.split(".")[0];
+    const tok=JSON.parse(localStorage.getItem(`sb-${ref}-auth-token`)||"null");
+    const c=tok?.user?.id && JSON.parse(localStorage.getItem("tecos-cache-"+tok.user.id)||"null");
+    if(Array.isArray(c)){ session={user:tok.user}; ordens=c; ready=true; provisoria=true;
+      document.getElementById("who").hidden=false; document.getElementById("whoemail").textContent=tok.user.email||""; go("dashboard"); }
+  }catch(e){}
   sb=supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_KEY);
   sb.auth.onAuthStateChange(async (ev,sess)=>{
+    if(provisoria){ const mesma = sess && session?.user?.id===sess.user?.id; provisoria=false;
+      if(mesma){ session=sess; document.getElementById("sino").hidden=false; carregarAlerta().then(()=>{ if(view!=="nova"&&view!=="editar") render(); }); carregar(); return; }
+      session=null; }
     if(ev==="PASSWORD_RECOVERY"){ const nova=window.prompt("Digite sua nova senha (mínimo 6 caracteres):"); if(nova){ const {error}=await sb.auth.updateUser({password:nova}); toast(error?"Não foi possível trocar a senha.":"Senha alterada."); } }
     const had=!!session; session=sess; loginMsg="";
     const who=document.getElementById("who"); who.hidden=!session; document.getElementById("sino").hidden=!session; document.getElementById("whoemail").textContent=session?.user?.email||"";
@@ -660,6 +672,7 @@ document.getElementById("logout").onclick=()=>sb.auth.signOut();
   const {data}=await sb.auth.getSession(); if(!data.session) render();
   window.addEventListener("focus",()=>session&&carregar());
 })();
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
 setInterval(()=>{ if(session) carregar(); },60000);
 
 </script>
