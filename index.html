@@ -126,6 +126,27 @@ legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-tr
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
 .legend span{display:inline-flex;gap:6px;align-items:center}
 .chart{width:100%;height:auto;display:block}
+.zoomable{display:block;width:100%;text-align:left;color:inherit;font:inherit;cursor:zoom-in}
+.zoomable:hover{border-color:var(--accent)}
+.zoomable h2{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.zoomhint{color:var(--muted);flex:none}
+.zoom{position:fixed;inset:0;z-index:50;background:var(--bg);overflow-y:auto;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.zoom-in{max-width:900px;margin:0 auto;padding-block:16px 32px;display:grid;gap:16px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.zoom-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.zoom-top h2{margin:0;font-size:22px;text-wrap:balance}
+.zoom .donutwrap{grid-template-columns:1fr;justify-items:center}
+.zoom .donutwrap svg{max-width:340px}
+.zoom .donutwrap .stack{width:100%;max-width:420px;font-size:17px}
+.zoom .barrow{font-size:16px;grid-template-columns:minmax(0,45%) 1fr auto}
+.zoom .barrow span:first-child{white-space:normal}
+.zoom .bartrack{height:20px}
+.mtab{overflow-x:auto;margin-top:12px}
+.mtab table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.mtab th,.mtab td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:right}
+.mtab th:first-child,.mtab td:first-child{text-align:left}
+.mtab th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
 .donutwrap{display:grid;grid-template-columns:150px 1fr;gap:18px;align-items:center}
 @media (max-width:380px){.donutwrap{grid-template-columns:1fr}}
 
@@ -190,7 +211,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=4"></script>
+<script src="config.js?v=5"></script>
 </body>
 </html>
 <script>
@@ -288,17 +309,17 @@ function vDash(){
     ${tile("concluida","Concluídas",c("concluida"),S.concluida.c)}
     <div class="tile"><div class="k">Tempo médio</div><div class="v sm">${dur(media)}</div><div class="h">recebimento → conclusão (${conc.length} OS)</div></div>
   </div>
-  <div class="panel"><h2>Equipamentos com mais OS</h2>${topEquip()}</div>
-  <div class="panel"><h2>Distribuição por status</h2>${donut()}</div>
-  <div class="panel"><h2>OS recebidas × concluídas por mês</h2>${lineChart()}</div>`}
+  <button class="panel zoomable" data-zoom="equip" aria-label="Ampliar gráfico de equipamentos com mais OS"><h2>Equipamentos com mais OS<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${topEquip()}</button>
+  <button class="panel zoomable" data-zoom="status" aria-label="Ampliar gráfico de distribuição por status"><h2>Distribuição por status<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${donut()}</button>
+  <button class="panel zoomable" data-zoom="mes" aria-label="Ampliar gráfico de OS por mês"><h2>OS recebidas × concluídas por mês<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${lineChart()}</button>`}
   </div>`;
 }
-function topEquip(){
+function topEquip(all){
   const m={}; ordens.forEach(o=>{const k=(o.equipamento||"Sem nome").trim(); m[k]=(m[k]||0)+1;});
-  const arr=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,8); const max=arr[0]?.[1]||1;
+  const arr=Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,all?999:8); const max=arr[0]?.[1]||1;
   return `<div class="bars">${arr.map(([n,v])=>`<div class="barrow"><span title="${esc(n)}">${esc(n)}</span><div class="bartrack"><div class="barfill" style="width:${v/max*100}%"></div></div><b>${v}</b></div>`).join("")}</div>`;
 }
-function donut(){
+function donut(big){
   const tot=ordens.length; let a=-Math.PI/2; const R=60,r=40,cx=75,cy=75;
   const segs=STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length; if(!v) return ""; const ang=v/tot*Math.PI*2;
     if(v===tot) return `<circle cx="${cx}" cy="${cy}" r="${(R+r)/2}" fill="none" stroke="${s.c}" stroke-width="${R-r}"/>`;
@@ -307,22 +328,23 @@ function donut(){
     const [x1,y1]=p(R,a),[x2,y2]=p(R,a2),[x3,y3]=p(r,a2),[x4,y4]=p(r,a);
     const d=`M${x1} ${y1}A${R} ${R} 0 ${L} 1 ${x2} ${y2}L${x3} ${y3}A${r} ${r} 0 ${L} 0 ${x4} ${y4}Z`; a+=ang; return `<path d="${d}" fill="${s.c}"/>`;}).join("");
   return `<div class="donutwrap"><svg class="chart" viewBox="0 0 150 150" role="img" aria-label="Distribuição por status">${segs}<text x="75" y="72" text-anchor="middle" style="font-size:24px;font-weight:800;fill:var(--fg)">${tot}</text><text x="75" y="90" text-anchor="middle">OS</text></svg>
-  <div class="stack" style="gap:8px">${STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length;return `<div class="row" style="justify-content:space-between"><span class="row" style="gap:8px"><span class="sd" style="background:${s.c}"></span>${s.n}</span><b style="font-variant-numeric:tabular-nums">${v}</b></div>`}).join("")}</div></div>`;
+  <div class="stack" style="gap:8px">${STATUS.map(s=>{const v=ordens.filter(o=>o.status===s.k).length;return `<div class="row" style="justify-content:space-between"><span class="row" style="gap:8px"><span class="sd" style="background:${s.c}"></span>${s.n}</span><b style="font-variant-numeric:tabular-nums">${v}${big&&tot?` <span style="color:var(--muted);font-weight:500">(${Math.round(v/tot*100)}%)</span>`:""}</b></div>`}).join("")}</div></div>`;
 }
-function lineChart(){
+function lineChart(big){
   const now=new Date(), months=[];
   for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth(),rec:0,con:0});}
   const idx=iso=>{const d=new Date(iso); if(isNaN(d)) return -1; return months.findIndex(x=>x.y===d.getFullYear()&&x.m===d.getMonth());};
   ordens.forEach(o=>{const i=idx(o.recebimento||o.abertura); if(i>=0) months[i].rec++; if(o.status==="concluida"&&o.conclusao){const j=idx(o.conclusao); if(j>=0) months[j].con++;}});
   const mx=Math.max(3,...months.map(m=>Math.max(m.rec,m.con))); const step=Math.ceil(mx/3); const top=step*3;
-  const W=340,H=180,L=28,R=10,T=12,B=28, iw=W-L-R, ih=H-T-B;
+  const W=340,H=big?240:180,L=28,R=20,T=12,B=28, iw=W-L-R, ih=H-T-B;
   const X=i=>L+i*iw/11, Y=v=>T+ih-v/top*ih;
   const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
   const line=(k,c)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round" points="${months.map((m,i)=>X(i)+","+Y(m[k])).join(" ")}"/>`+months.map((m,i)=>`<circle cx="${X(i)}" cy="${Y(m[k])}" r="${i===11?4:2.5}" fill="${c}"/>`).join("");
   let g=""; for(let v=0;v<=top;v+=step) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;
   const lbl=months.map((m,i)=>i%2===1||i===11?`<text x="${X(i)}" y="${H-8}" text-anchor="middle">${nm[m.m]}/${String(m.y).slice(2)}</text>`:"").join("");
+  const tab=big?`<div class="mtab"><table><thead><tr><th>Mês</th><th>Recebidas</th><th>Concluídas</th></tr></thead><tbody>${months.slice().reverse().map(m=>`<tr><td>${nm[m.m]}/${m.y}</td><td>${m.rec}</td><td>${m.con}</td></tr>`).join("")}</tbody></table></div>`:"";
   return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="OS recebidas e concluídas por mês">${g}${line("rec","var(--fg)")}${line("con","var(--accent)")}${lbl}</svg>
-  <div class="legend" style="margin-top:8px"><span><span class="sd" style="background:var(--fg)"></span>Recebidas</span><span><span class="sd" style="background:var(--accent)"></span>Concluídas</span></div>`;
+  <div class="legend" style="margin-top:8px"><span><span class="sd" style="background:var(--fg)"></span>Recebidas</span><span><span class="sd" style="background:var(--accent)"></span>Concluídas</span></div>${tab}`;
 }
 
 function filtered(){
@@ -417,12 +439,26 @@ function vRec(){
   </div>`;
 }
 
+/* ---------- gráfico ampliado ---------- */
+let zoomAtual=null;
+function abrirZoom(k){
+  zoomAtual=k; let el=document.getElementById("zoom");
+  if(!el){ el=document.createElement("div"); el.id="zoom"; el.className="zoom"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); document.body.append(el); }
+  const t={equip:"Equipamentos com mais OS",status:"Distribuição por status",mes:"OS recebidas × concluídas por mês"}[k];
+  const c={equip:()=>topEquip(true),status:()=>donut(true),mes:()=>lineChart(true)}[k]();
+  el.innerHTML=`<div class="zoom-in"><div class="zoom-top"><h2>${t}</h2><button class="btn" id="zoomx">Fechar</button></div><div class="panel">${c}</div></div>`;
+  document.getElementById("zoomx").onclick=fecharZoom; document.body.style.overflow="hidden"; document.getElementById("zoomx").focus();
+}
+function fecharZoom(){ zoomAtual=null; document.getElementById("zoom")?.remove(); document.body.style.overflow=""; }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&zoomAtual) fecharZoom(); });
+
 /* ---------- eventos ---------- */
 function bind(){
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
   app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>go("editar",b.dataset.open));
   app.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filt={q:"",status:b.dataset.filter,prio:"todas"}; go("ordens");});
   app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{filt[b.dataset.f]=b.dataset.v; render();});
+  app.querySelectorAll("[data-zoom]").forEach(b=>b.onclick=()=>abrirZoom(b.dataset.zoom));
   app.querySelectorAll("[data-per]").forEach(b=>b.onclick=()=>{periodo=+b.dataset.per; render();});
   const q=document.getElementById("q"); if(q){ q.oninput=()=>{filt.q=q.value; const pos=q.selectionStart; render(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos);}; }
   const exp=document.getElementById("exp"); if(exp) exp.onclick=exportCSV;
