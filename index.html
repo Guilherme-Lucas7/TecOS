@@ -11,6 +11,9 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://bnzksklfspgtvexloqka.supabase.co" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: app de uma coluna para celular, barra superior escura, navegação inferior fixa com botão central de nova OS. */
@@ -97,12 +100,14 @@ button.tile:hover{border-color:var(--accent)}
 .card .ds{color:var(--muted);overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .card .b{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
 .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.dates{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.timer.old{border-color:var(--p-urg);color:var(--p-urg)}
 .timer{margin-left:auto;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--fg)}
 
 .field{display:grid;gap:6px}
 .field label{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .field label i{color:var(--p-urg);font-style:normal}
-.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:11px 12px;font-size:16px}
+.field input,.field textarea,.field select{width:100%;max-width:100%;min-width:0;display:block;-webkit-appearance:none;appearance:none;min-height:46px;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:11px 12px;font-size:16px}
 .field textarea{min-height:92px;resize:vertical}
 fieldset{border:1px solid var(--line);border-radius:18px;padding:16px;margin:0;background:var(--surface);display:grid;gap:14px;min-width:0}
 legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-text)}
@@ -180,7 +185,7 @@ img{max-width:100%}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=2"></script>
+<script src="config.js?v=3"></script>
 </body>
 </html>
 <script>
@@ -198,7 +203,7 @@ const PRIO = [
 ];
 const S = Object.fromEntries(STATUS.map(s=>[s.k,s])), P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
 const app = document.getElementById("app");
-let sb = null, session = null, canWrite = true, ready = false, loginMsg = "";
+let sb = null, session = null, canWrite = true, ready = false, loginMsg = "", okOld = false;
 let ordens = [];          // {id, ...}
 let view = "dashboard", editId = null, draft = null;
 let filt = {q:"", status:"todas", prio:"todas"}, periodo = 180;
@@ -220,6 +225,7 @@ async function carregar(){
   const {data,error}=await sb.from("ordens").select("*").order("abertura",{ascending:false});
   if(error){ toast("Não foi possível carregar as OS. Verifique a internet."); return; }
   ordens=data.map(r=>{const o={id:r.id}; CAMPOS.forEach(k=>o[k]=r[k]??""); return o;}); ready=true;
+  try{ localStorage.setItem("tecos-cache-"+session.user.id, JSON.stringify(ordens)); }catch(e){}
   if(view!=="nova"&&view!=="editar"&&!/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"")) render();
 }
 async function saveOS(o){
@@ -325,7 +331,8 @@ function card(o){
     <div class="t"><span class="num">${esc(o.numero||"s/ nº")}</span>${pill(S[o.status])}</div>
     <div class="eq">${esc(o.equipamento||"Equipamento não informado")}</div>
     ${o.descricao?`<div class="ds">${esc(o.descricao)}</div>`:""}
-    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer">⏱ ${dur(elapsed(o))}</span></div>
+    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${elapsed(o)>60*864e5&&o.status!=="concluida"?" old":""}">⏱ ${dur(elapsed(o))}</span></div>
+    <div class="dates">Recebida ${fmtDate(o.recebimento||o.abertura)}${o.status==="concluida"&&o.conclusao?" · Concluída "+fmtDate(o.conclusao):""}</div>
   </button>`;
 }
 function vList(){
@@ -416,7 +423,7 @@ function bind(){
   const exp=document.getElementById("exp"); if(exp) exp.onclick=exportCSV;
   const form=document.getElementById("form");
   if(form){
-    form.querySelectorAll("input,textarea").forEach(el=>el.oninput=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(elapsed(draft));});
+    form.querySelectorAll("input,textarea").forEach(el=>{ el.oninput=el.onchange=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(elapsed(draft)); okOld=false;}; });
     form.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{draft[b.dataset.set]=b.dataset.v;
       if(b.dataset.set==="status"&&b.dataset.v==="concluida"&&!draft.conclusao) draft.conclusao=new Date().toISOString();
       render();});
@@ -424,6 +431,13 @@ function bind(){
       const miss=[["numero","Número da OS"],["abertura","Data de abertura"],["recebimento","Recebimento"],["setor","Setor"],["equipamento","Equipamento"],["descricao","Descrição do problema"]].filter(([k])=>!String(draft[k]||"").trim()).map(x=>x[1]);
       const err=document.getElementById("ferr");
       if(miss.length){ err.hidden=false; err.textContent="Preencha: "+miss.join(", ")+"."; err.scrollIntoView({block:"center"}); return; }
+      const t=k=>draft[k]?new Date(draft[k]).getTime():null, agora=Date.now();
+      const ab=t("abertura"), rc=t("recebimento"), cc=t("conclusao");
+      const futuro=[["abertura","Data de abertura"],["recebimento","Recebimento"],["conclusao","Data de conclusão"]].filter(([k])=>t(k)&&t(k)>agora+36e5).map(x=>x[1]);
+      if(futuro.length){ err.hidden=false; err.textContent="Data no futuro: "+futuro.join(", ")+". Confira dia, mês e ano."; err.scrollIntoView({block:"center"}); return; }
+      if(ab&&rc&&rc<ab-6e4){ err.hidden=false; err.textContent="O recebimento ("+fmtDate(draft.recebimento)+") está antes da abertura ("+fmtDate(draft.abertura)+"). Confira as datas."; err.scrollIntoView({block:"center"}); return; }
+      if(cc&&rc&&cc<rc){ err.hidden=false; err.textContent="A conclusão ("+fmtDate(draft.conclusao)+") está antes do recebimento ("+fmtDate(draft.recebimento)+"). Confira as datas."; err.scrollIntoView({block:"center"}); return; }
+      if(rc&&agora-rc>60*864e5&&draft.status!=="concluida"&&!okOld){ okOld=true; err.hidden=false; err.textContent="O recebimento está em "+fmtDate(draft.recebimento)+", há "+Math.floor((agora-rc)/864e5)+" dias. Se estiver certo, toque em salvar de novo."; err.scrollIntoView({block:"center"}); return; }
       const dup=ordens.find(x=>x.numero.trim()===draft.numero.trim()&&x.id!==editId);
       if(dup){ err.hidden=false; err.textContent="Já existe uma OS com o número "+draft.numero+"."; return; }
       const {_ocr, _texto, ...clean}=draft; const now=new Date().toISOString();
@@ -511,8 +525,8 @@ document.getElementById("logout").onclick=()=>sb.auth.signOut();
     if(ev==="PASSWORD_RECOVERY"){ const nova=window.prompt("Digite sua nova senha (mínimo 6 caracteres):"); if(nova){ const {error}=await sb.auth.updateUser({password:nova}); toast(error?"Não foi possível trocar a senha.":"Senha alterada."); } }
     const had=!!session; session=sess; loginMsg="";
     const who=document.getElementById("who"); who.hidden=!session; document.getElementById("whoemail").textContent=session?.user?.email||"";
-    if(session&&!had){ ready=false; go("dashboard"); carregar(); }
-    if(!session){ ordens=[]; render(); }
+    if(session&&!had){ ready=false; try{ const c=JSON.parse(localStorage.getItem("tecos-cache-"+session.user.id)||"null"); if(Array.isArray(c)){ ordens=c; ready=true; } }catch(e){} go("dashboard"); carregar(); }
+    if(!session){ ordens=[]; ready=false; try{ Object.keys(localStorage).filter(k=>k.startsWith("tecos-cache-")).forEach(k=>localStorage.removeItem(k)); }catch(e){} render(); }
   });
   const {data}=await sb.auth.getSession(); if(!data.session) render();
   window.addEventListener("focus",()=>session&&carregar());
