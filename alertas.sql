@@ -1,35 +1,35 @@
--- TecOS: alertas de OS atrasadas por notificação no celular (app ntfy).
--- Cole tudo no Supabase > SQL Editor > New query e clique em Run.
--- Pode rodar de novo sem problema: o comando não apaga OS nem configurações.
+/* TecOS: alertas de OS atrasadas por notificação no celular (app ntfy). */
+/* Cole tudo no Supabase > SQL Editor > New query e clique em Run. */
+/* Pode rodar de novo sem problema: o comando não apaga OS nem configurações. */
 
 create extension if not exists pg_net with schema extensions;
 create extension if not exists pg_cron;
 
--- Campos do solicitante da OS.
+/* Campos do solicitante da OS. */
 alter table public.ordens add column if not exists solicitante text;
 alter table public.ordens add column if not exists ramal text;
 
--- "Aberta" foi unificada com "Em manutenção": a OS entra direto em manutenção.
+/* "Aberta" foi unificada com "Em manutenção": a OS entra direto em manutenção. */
 update public.ordens set status = 'manutencao' where status = 'aberta';
 alter table public.ordens alter column status set default 'manutencao';
 
--- Compra de peças: o que falta, pedido, previsão e quanto tempo a OS esperou pela peça.
+/* Compra de peças: o que falta, pedido, previsão e quanto tempo a OS esperou pela peça. */
 alter table public.ordens add column if not exists peca_necessaria text;
 alter table public.ordens add column if not exists pedido_compra text;
 alter table public.ordens add column if not exists previsao_peca date;
 alter table public.ordens add column if not exists pecas_desde timestamptz;
 alter table public.ordens add column if not exists espera_pecas_seg bigint not null default 0;
--- Data em que a OS foi enviada para compra (fica guardada mesmo depois que a peça chega).
+/* Data em que a OS foi enviada para compra (fica guardada mesmo depois que a peça chega). */
 alter table public.ordens add column if not exists pedido_peca_em timestamptz;
--- OS que já passaram por compra antes desta coluna existir: data aproximada.
+/* OS que já passaram por compra antes desta coluna existir: data aproximada. */
 update public.ordens
    set pedido_peca_em = coalesce(pecas_desde, recebimento + make_interval(secs => greatest(0, extract(epoch from (coalesce(conclusao, now()) - recebimento)) - espera_pecas_seg)), recebimento)
  where pedido_peca_em is null and (status = 'pecas' or espera_pecas_seg > 0);
 
--- Guarda quando cada OS recebeu o último alerta, para não repetir toda hora.
+/* Guarda quando cada OS recebeu o último alerta, para não repetir toda hora. */
 alter table public.ordens add column if not exists ultimo_alerta timestamptz;
 
--- Configuração dos alertas (uma linha só). O app edita estes valores.
+/* Configuração dos alertas (uma linha só). O app edita estes valores. */
 create table if not exists public.alertas_config (
   id            int primary key default 1 check (id = 1),
   ativo         boolean not null default true,
@@ -51,7 +51,7 @@ drop policy if exists "editar alertas" on public.alertas_config;
 create policy "ler alertas"    on public.alertas_config for select to authenticated using (true);
 create policy "editar alertas" on public.alertas_config for update to authenticated using (true) with check (true);
 
--- Duração legível: "3d 4h"
+/* Duração legível: "3d 4h" */
 create or replace function public.tecos_fmt(d interval) returns text
 language sql immutable as $$
   select case when extract(epoch from d) >= 86400
@@ -59,7 +59,7 @@ language sql immutable as $$
       || floor(mod(extract(epoch from d)::numeric, 86400) / 3600)::int || 'h'
 $$;
 
--- Envia uma notificação para o tópico do ntfy.
+/* Envia uma notificação para o tópico do ntfy. */
 create or replace function public.tecos_enviar(c public.alertas_config, titulo text, msg text, prio int, tags text[])
 returns void language plpgsql security definer set search_path = public, extensions as $$
 begin
@@ -71,7 +71,7 @@ begin
   );
 end $$;
 
--- Confere as OS em aberto e avisa as que passaram do prazo da prioridade.
+/* Confere as OS em aberto e avisa as que passaram do prazo da prioridade. */
 create or replace function public.tecos_alertas() returns int
 language plpgsql security definer set search_path = public, extensions as $$
 declare
@@ -88,13 +88,13 @@ begin
 
   for o in
     select x.*,
-           now() - coalesce(x.recebimento, x.abertura) - make_interval(secs => coalesce(x.espera_pecas_seg, 0)) as idade,  -- tempo de compra não conta
+           now() - coalesce(x.recebimento, x.abertura) - make_interval(secs => coalesce(x.espera_pecas_seg, 0)) as idade, /* tempo de compra não conta */
            case x.prioridade when 'urgente' then c.horas_urgente
                              when 'alta'    then c.horas_alta
                              when 'baixa'   then c.horas_baixa
                              else c.horas_media end as limite
       from public.ordens x
-     where x.status not in ('concluida', 'pecas')  -- aguardando peça não conta como atraso do técnico
+     where x.status not in ('concluida', 'pecas') /* aguardando peça não conta como atraso do técnico */
      order by coalesce(x.recebimento, x.abertura)
   loop
     if o.idade > make_interval(hours => o.limite)
@@ -122,7 +122,7 @@ begin
   return n;
 end $$;
 
--- Botão "Enviar teste" do app.
+/* Botão "Enviar teste" do app. */
 create or replace function public.tecos_alerta_teste() returns void
 language plpgsql security definer set search_path = public, extensions as $$
 declare c public.alertas_config;
@@ -138,6 +138,6 @@ revoke all on function public.tecos_alertas() from public, anon, authenticated;
 revoke all on function public.tecos_alerta_teste() from public, anon;
 grant execute on function public.tecos_alerta_teste() to authenticated;
 
--- Confere uma vez por hora (só envia aviso quando a OS passa do prazo).
+/* Confere uma vez por hora (só envia aviso quando a OS passa do prazo). */
 select cron.unschedule(jobid) from cron.job where jobname = 'tecos-alertas';
 select cron.schedule('tecos-alertas', '0 * * * *', 'select public.tecos_alertas()');
