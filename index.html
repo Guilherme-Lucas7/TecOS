@@ -150,6 +150,15 @@ legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-tr
 .pausa-t .k{color:var(--s-pecas)}
 .compra-v{border-color:var(--s-pecas)}
 .compra-v h2{color:var(--s-pecas)}
+.pitens{display:grid;gap:8px}
+.pitem{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:8px;align-items:center}
+.pitem input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:11px 10px;font-size:16px;min-height:46px;min-width:0}
+.pitem .pq{text-align:center}
+.pdel{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--p-urg);font-size:22px;line-height:1}
+#padd{justify-self:start;margin-top:4px}
+.pl{margin:0;padding-left:20px;display:grid;gap:4px}
+.pl b{font-variant-numeric:tabular-nums}
+fieldset.compra legend{color:var(--s-pecas)}
 .compra{display:grid;gap:12px;border:1px solid var(--s-pecas);background:var(--s-pecas-bg);border-radius:14px;padding:14px}
 .compra-t{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--s-pecas)}
 .est-sec{display:grid;gap:4px;min-width:0}
@@ -270,7 +279,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=13"></script>
+<script src="config.js?v=14"></script>
 </body>
 </html>
 <script>
@@ -305,12 +314,16 @@ function fromLocalInput(v){ if(!v) return ""; const d=new Date(v); return isNaN(
 function fmtDate(iso){ if(!iso) return "—"; const d=new Date(iso); return isNaN(d)?"—":d.toLocaleString("pt-BR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
 function dur(ms){ if(!(ms>0)) return "0m"; const m=Math.floor(ms/60000), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return (d?d+"d ":"")+(d||h?h+"h ":"")+mm+"m"; }
 function limiteHoras(o){ return ({urgente:alerta.horas_urgente,alta:alerta.horas_alta,baixa:alerta.horas_baixa})[o.prioridade]||alerta.horas_media; }
+function itensPeca(txt){ return String(txt||"").split(/\n|;/).map(l=>l.trim()).filter(Boolean).map(l=>{ const m=l.match(/^(\d+)\s*(?:x|×|un\.?|unid\.?|unidades?|pç|pc|pçs|pcs)?\s+(.+)$/i); return m?{q:String(+m[1]),d:m[2].trim()}:{q:"",d:l}; }); }
+function txtPecas(itens){ return itens.filter(i=>String(i.d||"").trim()).map(i=>(String(i.q||"").trim()?String(i.q).trim()+"x ":"")+String(i.d).trim()).join("\n"); }
+function listaPecas(txt){ const it=itensPeca(txt); return it.length?`<ul class="pl">${it.map(i=>`<li>${i.q?`<b>${esc(i.q)}×</b> `:""}${esc(i.d)}</li>`).join("")}</ul>`:""; }
+function resumoPecas(txt){ const it=itensPeca(txt); if(!it.length) return ""; const p=(it[0].q?it[0].q+"× ":"")+it[0].d; return it.length>1?p+` +${it.length-1}`:p; }
 function esperaPeca(o){ const base=(+o.espera_pecas_seg||0)*1000; return o.status==="pecas"&&o.pecas_desde?base+Math.max(0,Date.now()-new Date(o.pecas_desde)):base; }
 function tecnico(o){ return Math.max(0,elapsed(o)-esperaPeca(o)); }
 function atrasada(o){ return o.status!=="concluida"&&o.status!=="pecas"&&tecnico(o)>limiteHoras(o)*36e5; }
 function elapsed(o){ const ini=new Date(o.recebimento||o.abertura); if(isNaN(ini)) return 0; const fim=o.status==="concluida"&&o.conclusao?new Date(o.conclusao):new Date(); return fim-ini; }
 function pill(def){ return def?`<span class="pill" style="color:${def.c};background:${def.bg}"><span class="sd" style="background:${def.c}"></span>${esc(def.n)}</span>`:""; }
-function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2600); }
+function toast(msg,ms){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),ms||2600); }
 
 /* ---------- banco de dados (Supabase) ---------- */
 const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","solicitante","ramal","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao","peca_necessaria","pedido_compra","previsao_peca","pecas_desde","espera_pecas_seg","pedido_peca_em"];
@@ -329,8 +342,17 @@ async function saveOS(o){
   const row={}; CAMPOS.forEach(k=>row[k]=(o[k]===""&&["abertura","recebimento","conclusao","patrimonio","localizacao","diagnostico","servico","pecas","solicitante","ramal","peca_necessaria","pedido_compra","previsao_peca","pecas_desde","pedido_peca_em"].includes(k))?null:o[k]);
   row.espera_pecas_seg=Math.round(+o.espera_pecas_seg||0);
   row.atualizado_em=new Date().toISOString();
-  const q=editId?sb.from("ordens").update(row).eq("id",editId):sb.from("ordens").insert(row);
-  const {error}=await q; if(error) throw error; await carregar();
+  const faltando=[];
+  for(let i=0;i<16;i++){
+    const q=editId?sb.from("ordens").update(row).eq("id",editId):sb.from("ordens").insert(row);
+    const {error}=await q; if(!error) break;
+    const m=String(error.message||"").match(/'([a-z_]+)' column|column "?(?:ordens\.)?([a-z_]+)"? (?:of relation "ordens" )?does not exist/);
+    const col=m&&(m[1]||m[2]);
+    if((error.code==="PGRST204"||error.code==="42703")&&col&&col in row&&!["numero","status","setor","equipamento","descricao"].includes(col)){ delete row[col]; faltando.push(col); continue; }
+    throw error;
+  }
+  await carregar();
+  return faltando;
 }
 async function deleteOS(id){ const {error}=await sb.from("ordens").delete().eq("id",id); if(error) throw error; await carregar(); }
 
@@ -441,7 +463,7 @@ function card(o){
     <div class="eq">${esc(o.equipamento||"Equipamento não informado")}</div>
     ${o.descricao?`<div class="ds">${esc(o.descricao)}</div>`:""}
     <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${atrasada(o)?" old":""}${o.status==="pecas"?" pausa":""}" title="${o.status==="pecas"?"Tempo de atendimento parado enquanto espera a peça":"Tempo de atendimento"}">${atrasada(o)?"Atrasada · ":o.status==="pecas"?"⏸ ":"⏱ "}${dur(tecnico(o))}</span></div>
-    ${o.status==="pecas"?`<div class="dates" style="color:var(--s-pecas)">Aguardando peça${o.peca_necessaria?": "+esc(o.peca_necessaria):""}${o.pecas_desde?" · há "+durC(Date.now()-new Date(o.pecas_desde)):""}</div>`:""}
+    ${o.status==="pecas"?`<div class="dates" style="color:var(--s-pecas)">Aguardando peça${o.peca_necessaria?": "+esc(resumoPecas(o.peca_necessaria)):""}${o.pecas_desde?" · há "+durC(Date.now()-new Date(o.pecas_desde)):""}</div>`:""}
     ${o.solicitante||o.ramal?`<div class="dates">${o.solicitante?"Solicitante: "+esc(o.solicitante):""}${o.solicitante&&o.ramal?" · ":""}${o.ramal?"Ramal "+esc(o.ramal):""}</div>`:""}
     <div class="dates">Recebida ${fmtDate(o.recebimento||o.abertura)}${o.status==="concluida"&&o.conclusao?" · Concluída "+fmtDate(o.conclusao):""}</div>
   </button>`;
@@ -481,18 +503,21 @@ function vForm(){
   <fieldset><legend>Andamento</legend>
     <div class="field"><label>Prioridade</label>${chips("prioridade",PRIO)}</div>
     <div class="field"><label>Status</label>${chips("status",STATUS)}</div>
-    ${o.status==="pecas"?`<div class="compra"><div class="compra-t"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"/></svg>Compra de peça</div>
-      <p class="hint" style="margin:0">A OS vai para a lista de <b>Compras</b> e o tempo esperando a peça é contado à parte, sem gerar alerta de atraso.</p>
-      ${f("peca_necessaria","Peça necessária",1,"text",'placeholder="Ex.: bateria 12V 7Ah, sensor SpO2"')}
-      <div class="two">${f("pedido_compra","Nº do pedido / solicitação",0)}${f("previsao_peca","Previsão de chegada",0,"date")}</div>
-      ${o.pecas_desde?`<div class="hint">Aguardando desde ${fmtDate(o.pecas_desde)} (${durC(Date.now()-new Date(o.pecas_desde))})</div>`:""}</div>`:""}
-    ${esperaPeca(o)>0&&o.status!=="pecas"?`<div class="hint">Passou por compra${o.peca_necessaria?" ("+esc(o.peca_necessaria)+")":""}: ${durC(esperaPeca(o))} esperando a peça.</div>`:""}
+    ${esperaPeca(o)>0&&o.status!=="pecas"?`<div class="hint">Passou por compra${o.peca_necessaria?" ("+esc(resumoPecas(o.peca_necessaria))+")":""}: ${durC(esperaPeca(o))} esperando a peça.</div>`:""}
     ${t("diagnostico","Diagnóstico técnico")}
     ${t("servico","Serviço realizado")}
     ${f("pecas","Peças utilizadas",0,"text",'placeholder="Ex.: sensor SpO2, bateria 12V"')}
     ${f("conclusao","Data de conclusão",0,"datetime-local")}
     <div class="field"><label>Tempo de atendimento${o.status==="pecas"?" (parado na compra)":""}</label><div class="elapsed" id="el">${dur(tecnico(o))}</div>${esperaPeca(o)>0?`<div class="hint">Tempo de compra: ${durC(esperaPeca(o))} · total ${durC(elapsed(o))}</div>`:""}</div>
   </fieldset>
+  ${o.status==="pecas"?(()=>{ if(!o._itens){ o._itens=itensPeca(o.peca_necessaria); } if(!o._itens.length) o._itens=[{q:"1",d:""}];
+    return `<fieldset class="compra"><legend><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 7H6"/></svg> Compra de peças</legend>
+      <p class="hint" style="margin:0">A OS vai para a lista de <b>Compras</b> e o tempo de atendimento fica parado até a peça chegar.</p>
+      <div class="field"><label>Peças a comprar <i>*</i></label>
+        <div class="pitens">${o._itens.map((it,k)=>`<div class="pitem"><input class="pq" data-pq="${k}" type="text" inputmode="numeric" aria-label="Quantidade" placeholder="Qtd" value="${esc(it.q)}"><input class="pd" data-pd="${k}" type="text" aria-label="Peça" placeholder="Ex.: interfone com vídeo" value="${esc(it.d)}">${o._itens.length>1?`<button type="button" class="pdel" data-pdel="${k}" aria-label="Remover peça">×</button>`:""}</div>`).join("")}</div>
+        <button type="button" class="btn" id="padd">+ Adicionar peça</button></div>
+      <div class="two">${f("pedido_compra","Nº do pedido / solicitação",0)}${f("previsao_peca","Previsão de chegada",0,"date")}</div>
+      ${o.pecas_desde?`<div class="hint">Aguardando desde ${fmtDate(o.pecas_desde)} (${durC(Date.now()-new Date(o.pecas_desde))})</div>`:""}</fieldset>`; })():""}
   <div id="ferr" class="confirm" hidden></div>
   <div class="savebar"><button class="btn pri full" type="submit" ${!canWrite?"disabled":""}>${ed?"Salvar alterações":"Cadastrar OS"}</button></div>
   ${ed?(confirmDel?`<div class="confirm">Excluir esta OS de vez? <button type="button" class="btn danger" id="delyes">Excluir</button><button type="button" class="btn" id="delno">Cancelar</button></div>`:`<button type="button" class="btn danger" id="del" ${!canWrite?"disabled":""}>Excluir OS</button>`):""}
@@ -548,7 +573,7 @@ function estCompras(lim){
   const espA=andam.length?andam.reduce((a,o)=>a+esperaPeca(o),0)/andam.length:0;
   const comPrev=feitas.filter(o=>o.previsao_peca), cumpr=comPrev.filter(o=>ped(o).getTime()+esperaPeca(o)<=new Date(o.previsao_peca+"T23:59:59").getTime()).length;
   const tile=(k,v,h)=>`<div class="tile" style="border-color:color-mix(in srgb,var(--s-pecas) 45%,var(--line))"><div class="k">${k}</div><div class="v sm">${v}</div>${h?`<div class="h">${h}</div>`:""}</div>`;
-  const porPeca=(()=>{ const m={}; feitas.forEach(o=>{ const g=(o.peca_necessaria||"Não informada").trim(); (m[g]=m[g]||[]).push(esperaPeca(o)); });
+  const porPeca=(()=>{ const m={}; feitas.forEach(o=>{ const it=itensPeca(o.peca_necessaria); (it.length?it.map(i=>i.d):["Não informada"]).forEach(d=>{ const g=d.charAt(0).toUpperCase()+d.slice(1); (m[g]=m[g]||[]).push(esperaPeca(o)); }); });
     return Object.entries(m).map(([n,a])=>{ const v=a.reduce((x,y)=>x+y,0)/a.length; return {n,v,c:a.length,lbl:`${durC(v)} <small>· ${a.length}</small>`,tip:`média ${durC(v)} em ${a.length} compras`}; }).sort((a,b)=>b.c-a.c||b.v-a.v).slice(0,8).sort((a,b)=>b.v-a.v); })();
   return cab+`<div class="tiles">
     ${tile("Tempo médio de compra",feitas.length?durC(med):"—",`${feitas.length} compra${feitas.length===1?"":"s"} concluída${feitas.length===1?"":"s"}`)}
@@ -646,13 +671,14 @@ function vVer(){
     ${lin("Solicitante",esc(o.solicitante))}${lin("Ramal",esc(o.ramal),1)}
     ${lin("Abertura",fmtDate(o.abertura))}${lin("Recebimento",fmtDate(o.recebimento))}${o.conclusao?lin("Conclusão",fmtDate(o.conclusao)):""}
   </dl></div>
-  ${cp||o.peca_necessaria?`<div class="panel compra-v"><h2>Compra de peça</h2><dl class="dl">
-    ${lin("Peça",esc(o.peca_necessaria||"—"))}${lin("Pedido",esc(o.pedido_compra),1)}${o.previsao_peca?lin("Previsão",fmtD(o.previsao_peca)):""}
-    ${o.pedido_peca_em?lin("Enviada para compra",fmtDate(o.pedido_peca_em)):""}${cp?lin("Situação","Aguardando a peça"):lin("Situação","Peça recebida")}
-  </dl>${cp?`<button class="btn pri" data-chegou="${esc(o.id)}" style="margin-top:12px">Peça chegou</button>`:""}</div>`:""}
   <div class="panel"><h2>Serviço</h2><dl class="dl">
     ${txt("Diagnóstico técnico",o.diagnostico)}${txt("Serviço realizado",o.servico)}${txt("Peças utilizadas",o.pecas)}
   </dl></div>
+  ${cp||o.peca_necessaria?`<div class="panel compra-v"><h2>Compra de peças</h2>
+    ${o.peca_necessaria?listaPecas(o.peca_necessaria):'<p class="vazio" style="margin:0 0 8px">Peças não informadas. Toque em Editar para incluir.</p>'}
+    <dl class="dl" style="margin-top:8px">${lin("Pedido",esc(o.pedido_compra),1)}${o.previsao_peca?lin("Previsão",fmtD(o.previsao_peca)):""}
+    ${o.pedido_peca_em?lin("Enviada para compra",fmtDate(o.pedido_peca_em)):""}${cp?lin("Situação","Aguardando a peça"):lin("Situação","Peça recebida")}
+  </dl>${cp?`<button class="btn pri" data-chegou="${esc(o.id)}" style="margin-top:12px">Peça chegou</button>`:""}</div>`:""}
   </div>`;
 }
 
@@ -668,8 +694,8 @@ function vCompras(){
   const hoje=new Date(); hoje.setHours(0,0,0,0);
   const fmtD=d=>{ const [y,m,dd]=String(d).split("-"); return dd&&m?`${dd}/${m}/${y}`:d; };
   const item=o=>{ const desde=o.pecas_desde?Date.now()-new Date(o.pecas_desde):0; const prev=o.previsao_peca?new Date(o.previsao_peca+"T00:00:00"):null; const venc=prev&&prev<hoje;
-    return `<div class="panel group"><div class="gh"><div style="min-width:0"><span class="num">${esc(o.numero)}</span><h2 style="margin:2px 0 0">${esc(o.peca_necessaria||"Peça não informada")}</h2>
-      <div class="gl">${esc(o.equipamento||"")} · ${esc(o.setor||"")}${o.ramal?" · Ramal "+esc(o.ramal):""}</div>
+    return `<div class="panel group"><div class="gh"><div style="min-width:0"><span class="num">${esc(o.numero)}</span><h2 style="margin:2px 0 4px;font-size:16px">${esc(o.equipamento||"")}</h2>${o.peca_necessaria?listaPecas(o.peca_necessaria):'<div class="vazio">Peças não informadas</div>'}
+      <div class="gl">${esc(o.setor||"")}${o.ramal?" · Ramal "+esc(o.ramal):""}</div>
       <div class="gl">${o.pedido_compra?"Pedido "+esc(o.pedido_compra)+" · ":""}${prev?`<span style="${venc?"color:var(--p-urg);font-weight:700":""}">Previsão ${fmtD(o.previsao_peca)}${venc?" (vencida)":""}</span>`:"Sem previsão"}</div></div>
       <span class="cnt" style="background:var(--s-pecas-bg);color:var(--s-pecas)">${desde?durC(desde):"—"}</span></div>
       <div class="row"><button class="btn pri" data-chegou="${esc(o.id)}">Peça chegou</button><button class="btn" data-open="${esc(o.id)}">Abrir OS</button></div></div>`; };
@@ -787,6 +813,9 @@ function bind(){
       if(ant){ r.value=ant.ramal; draft.ramal=ant.ramal; } };
     ["f-setor","f-localizacao"].forEach(id=>document.getElementById(id)?.addEventListener("change",sugereRamal));
     form.querySelectorAll("input,textarea").forEach(el=>{ el.oninput=el.onchange=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(tecnico(draft)); okOld=false;}; });
+    form.querySelectorAll("[data-pq],[data-pd]").forEach(el=>el.oninput=()=>{ const k=+(el.dataset.pq??el.dataset.pd); draft._itens[k][el.dataset.pq!=null?"q":"d"]=el.value; draft.peca_necessaria=txtPecas(draft._itens); });
+    form.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=()=>{ draft._itens.splice(+b.dataset.pdel,1); draft.peca_necessaria=txtPecas(draft._itens); render(); });
+    const padd=document.getElementById("padd"); if(padd) padd.onclick=()=>{ draft._itens.push({q:"1",d:""}); render(); const l=app.querySelectorAll(".pd"); l[l.length-1]?.focus(); };
     form.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{draft[b.dataset.set]=b.dataset.v;
       if(b.dataset.set==="status"&&b.dataset.v==="concluida"&&!draft.conclusao) draft.conclusao=new Date().toISOString();
       render();});
@@ -801,12 +830,13 @@ function bind(){
       if(ab&&rc&&rc<ab-6e4){ err.hidden=false; err.textContent="O recebimento ("+fmtDate(draft.recebimento)+") está antes da abertura ("+fmtDate(draft.abertura)+"). Confira as datas."; err.scrollIntoView({block:"center"}); return; }
       if(cc&&rc&&cc<rc){ err.hidden=false; err.textContent="A conclusão ("+fmtDate(draft.conclusao)+") está antes do recebimento ("+fmtDate(draft.recebimento)+"). Confira as datas."; err.scrollIntoView({block:"center"}); return; }
       if(rc&&agora-rc>60*864e5&&draft.status!=="concluida"&&!okOld){ okOld=true; err.hidden=false; err.textContent="O recebimento está em "+fmtDate(draft.recebimento)+", há "+Math.floor((agora-rc)/864e5)+" dias. Se estiver certo, toque em salvar de novo."; err.scrollIntoView({block:"center"}); return; }
-      if(draft.status==="pecas"&&!String(draft.peca_necessaria||"").trim()){ err.hidden=false; err.textContent="Informe a peça necessária para enviar a OS para compras."; document.getElementById("f-peca_necessaria")?.focus(); return; }
+      if(draft._itens) draft.peca_necessaria=txtPecas(draft._itens);
+      if(draft.status==="pecas"&&!String(draft.peca_necessaria||"").trim()){ err.hidden=false; err.textContent="Informe pelo menos uma peça para enviar a OS para compras."; app.querySelector(".pd")?.focus(); return; }
       const dup=ordens.find(x=>x.numero.trim()===draft.numero.trim()&&x.id!==editId);
       if(dup){ err.hidden=false; err.textContent="Já existe uma OS com o número "+draft.numero+"."; return; }
-      const {_ocr, _texto, ...clean}=draft; const now=new Date().toISOString();
+      const {_ocr, _texto, _itens, ...clean}=draft; const now=new Date().toISOString();
       const o={...clean}; transicaoPeca(editId?ordens.find(x=>x.id===editId):null,o);
-      try{ const era=editId; await saveOS(o); toast(era?"OS atualizada":"OS cadastrada"); if(era) go("ver",era); else go("ordens"); }
+      try{ const era=editId; const falt=await saveOS(o); if(falt.length) toast("OS salva. Para guardar também "+(falt.some(c=>/peca|pedido|espera/.test(c))?"a compra de peças":"os campos novos")+", rode o alertas.sql no Supabase.",7000); else toast(era?"OS atualizada":"OS cadastrada"); if(era) go("ver",era); else go("ordens"); }
       catch(x){ err.hidden=false; err.textContent=x?.code==="23505"?"Já existe uma OS com o número "+draft.numero+".":(x?.code==="PGRST204"||/solicitante|ramal|peca_|pedido_|espera_|pecas_desde/.test(x?.message||""))?"Faltam campos novos no banco: rode de novo o alertas.sql no Supabase (SQL Editor).":"Não foi possível salvar. Verifique a internet e tente de novo."; }
     };
     const del=document.getElementById("del"); if(del) del.onclick=()=>{confirmDel=true; render();};
