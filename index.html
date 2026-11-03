@@ -126,6 +126,13 @@ legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-tr
 .barrow span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
 .bartrack{height:14px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
 .prazo{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--p-urg);opacity:.9}
+.compras-p{display:block;width:100%;text-align:left;color:inherit;font:inherit;border-color:var(--s-pecas)}
+.compras-p h2{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.cp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:560px){.cp{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.cp b{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--s-pecas)}
+.cp span{font-size:12px;color:var(--muted)}
+.cp .vence b{color:var(--p-urg)}
 .compra{display:grid;gap:12px;border:1px solid var(--s-pecas);background:var(--s-pecas-bg);border-radius:14px;padding:14px}
 .compra-t{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--s-pecas)}
 .est-sec{display:grid;gap:4px;min-width:0}
@@ -246,7 +253,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=9"></script>
+<script src="config.js?v=10"></script>
 </body>
 </html>
 <script>
@@ -287,7 +294,7 @@ function pill(def){ return def?`<span class="pill" style="color:${def.c};backgro
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2600); }
 
 /* ---------- banco de dados (Supabase) ---------- */
-const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","solicitante","ramal","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao","peca_necessaria","pedido_compra","previsao_peca","pecas_desde","espera_pecas_seg"];
+const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","solicitante","ramal","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao","peca_necessaria","pedido_compra","previsao_peca","pecas_desde","espera_pecas_seg","pedido_peca_em"];
 async function carregarAlerta(){
   const {data,error}=await sb.from("alertas_config").select("*").eq("id",1).maybeSingle();
   if(!error&&data){ alerta={...ALERTA_PADRAO,...data}; alertaPronto=true; } else alertaPronto=false;
@@ -300,7 +307,7 @@ async function carregar(){
   if(view!=="nova"&&view!=="editar"&&!/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"")) render();
 }
 async function saveOS(o){
-  const row={}; CAMPOS.forEach(k=>row[k]=(o[k]===""&&["abertura","recebimento","conclusao","patrimonio","localizacao","diagnostico","servico","pecas","solicitante","ramal","peca_necessaria","pedido_compra","previsao_peca","pecas_desde"].includes(k))?null:o[k]);
+  const row={}; CAMPOS.forEach(k=>row[k]=(o[k]===""&&["abertura","recebimento","conclusao","patrimonio","localizacao","diagnostico","servico","pecas","solicitante","ramal","peca_necessaria","pedido_compra","previsao_peca","pecas_desde","pedido_peca_em"].includes(k))?null:o[k]);
   row.espera_pecas_seg=Math.round(+o.espera_pecas_seg||0);
   row.atualizado_em=new Date().toISOString();
   const q=editId?sb.from("ordens").update(row).eq("id",editId):sb.from("ordens").insert(row);
@@ -357,9 +364,16 @@ function vDash(){
     ${tile("concluida","Concluídas",c("concluida"),S.concluida.c)}
     <button class="tile" data-go="estatisticas"><div class="k">Tempo médio</div><div class="v sm">${durC(media)}</div><div class="h">recebimento → conclusão (${conc.length} OS)</div><div class="h" style="color:var(--accent-text);font-weight:600;margin-top:4px">Ver estatísticas →</div></button>
   </div>
+  ${(()=>{ const ag=ordens.filter(o=>o.status==="pecas"); if(!ag.length&&!ordens.some(o=>o.pedido_peca_em)) return "";
+    const hoje=new Date(); hoje.setHours(0,0,0,0); const venc=ag.filter(o=>o.previsao_peca&&new Date(o.previsao_peca+"T00:00:00")<hoje).length;
+    const esp=ag.length?ag.reduce((s,o)=>s+(o.pecas_desde?Date.now()-new Date(o.pecas_desde):0),0)/ag.length:0;
+    const mes=ordens.filter(o=>{const d=new Date(o.pedido_peca_em||0); return d.getMonth()===hoje.getMonth()&&d.getFullYear()===hoje.getFullYear();}).length;
+    return `<button class="panel compras-p" data-go="compras"><h2>Compras de peças<span class="zoomhint">Ver →</span></h2><div class="cp">
+      <div><b>${ag.length}</b><span>aguardando agora</span></div><div><b>${ag.length?durC(esp):"—"}</b><span>espera média</span></div>
+      <div${venc?' class="vence"':""}><b>${venc}</b><span>previsão vencida</span></div><div><b>${mes}</b><span>pedidos este mês</span></div></div></button>`; })()}
   <button class="panel zoomable" data-zoom="equip" aria-label="Ampliar gráfico de equipamentos com mais OS"><h2>Equipamentos com mais OS<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${topEquip()}</button>
   <button class="panel zoomable" data-zoom="status" aria-label="Ampliar gráfico de distribuição por status"><h2>Distribuição por status<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${donut()}</button>
-  <button class="panel zoomable" data-zoom="mes" aria-label="Ampliar gráfico de OS por mês"><h2>OS recebidas × concluídas por mês<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${lineChart()}</button>`}
+  <button class="panel zoomable" data-zoom="mes" aria-label="Ampliar gráfico de OS por mês"><h2>OS por mês<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${lineChart()}</button>`}
   </div>`;
 }
 function topEquip(all){
@@ -380,19 +394,20 @@ function donut(big){
 }
 function lineChart(big){
   const now=new Date(), months=[];
-  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth(),rec:0,con:0});}
+  for(let i=11;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1); months.push({y:d.getFullYear(),m:d.getMonth(),rec:0,con:0,ped:0});}
   const idx=iso=>{const d=new Date(iso); if(isNaN(d)) return -1; return months.findIndex(x=>x.y===d.getFullYear()&&x.m===d.getMonth());};
-  ordens.forEach(o=>{const i=idx(o.recebimento||o.abertura); if(i>=0) months[i].rec++; if(o.status==="concluida"&&o.conclusao){const j=idx(o.conclusao); if(j>=0) months[j].con++;}});
-  const mx=Math.max(3,...months.map(m=>Math.max(m.rec,m.con))); const step=Math.ceil(mx/3); const top=step*3;
+  ordens.forEach(o=>{const i=idx(o.recebimento||o.abertura); if(i>=0) months[i].rec++; const pd=o.pedido_peca_em||o.pecas_desde; if(pd){const p=idx(pd); if(p>=0) months[p].ped++;} if(o.status==="concluida"&&o.conclusao){const j=idx(o.conclusao); if(j>=0) months[j].con++;}});
+  const mx=Math.max(3,...months.map(m=>Math.max(m.rec,m.con,m.ped))); const step=Math.ceil(mx/3); const top=step*3;
   const W=340,H=big?240:180,L=28,R=20,T=12,B=28, iw=W-L-R, ih=H-T-B;
   const X=i=>L+i*iw/11, Y=v=>T+ih-v/top*ih;
   const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
   const line=(k,c)=>`<polyline fill="none" stroke="${c}" stroke-width="2.5" stroke-linejoin="round" points="${months.map((m,i)=>X(i)+","+Y(m[k])).join(" ")}"/>`+months.map((m,i)=>`<circle cx="${X(i)}" cy="${Y(m[k])}" r="${i===11?4:2.5}" fill="${c}"/>`).join("");
   let g=""; for(let v=0;v<=top;v+=step) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;
   const lbl=months.map((m,i)=>i%2===1||i===11?`<text x="${X(i)}" y="${H-8}" text-anchor="middle">${nm[m.m]}/${String(m.y).slice(2)}</text>`:"").join("");
-  const tab=big?`<div class="mtab"><table><thead><tr><th>Mês</th><th>Recebidas</th><th>Concluídas</th></tr></thead><tbody>${months.slice().reverse().map(m=>`<tr><td>${nm[m.m]}/${m.y}</td><td>${m.rec}</td><td>${m.con}</td></tr>`).join("")}</tbody></table></div>`:"";
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="OS recebidas e concluídas por mês">${g}${line("rec","var(--fg)")}${line("con","var(--accent)")}${lbl}</svg>
-  <div class="legend" style="margin-top:8px"><span><span class="sd" style="background:var(--fg)"></span>Recebidas</span><span><span class="sd" style="background:var(--accent)"></span>Concluídas</span></div>${tab}`;
+  const bw=Math.min(14,iw/11*.55), ped=months.map((m,i)=>m.ped?`<g><title>${nm[m.m]}/${m.y}: ${m.ped} OS enviada${m.ped>1?"s":""} para compra</title><path d="M${X(i)-bw/2} ${T+ih}V${Y(m.ped)+3}a3 3 0 0 1 3-3h${bw-6}a3 3 0 0 1 3 3V${T+ih}Z" fill="var(--s-pecas)" opacity=".55"/></g>`:"").join("");
+  const tab=big?`<div class="mtab"><table><thead><tr><th>Mês</th><th>Recebidas</th><th>Concluídas</th><th>Compra</th></tr></thead><tbody>${months.slice().reverse().map(m=>`<tr><td>${nm[m.m]}/${m.y}</td><td>${m.rec}</td><td>${m.con}</td><td>${m.ped}</td></tr>`).join("")}</tbody></table></div>`:"";
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="OS recebidas, concluídas e enviadas para compra por mês">${g}${ped}${line("rec","var(--fg)")}${line("con","var(--accent)")}${lbl}</svg>
+  <div class="legend" style="margin-top:8px"><span><span class="sd" style="background:var(--fg)"></span>Recebidas</span><span><span class="sd" style="background:var(--accent)"></span>Concluídas</span><span><span class="sd" style="background:var(--s-pecas);border-radius:3px"></span>Enviadas para compra</span></div>${tab}`;
 }
 
 function filtered(){
@@ -549,7 +564,7 @@ function vEst(){
 /* ---------- compras (aguardando peça) ---------- */
 function transicaoPeca(orig,o){
   const agora=new Date(), era=orig?.status==="pecas", vai=o.status==="pecas";
-  if(vai&&!era) o.pecas_desde=agora.toISOString();
+  if(vai&&!era){ o.pecas_desde=agora.toISOString(); if(!o.pedido_peca_em) o.pedido_peca_em=o.pecas_desde; }
   if(vai&&era) o.pecas_desde=orig.pecas_desde||agora.toISOString();
   if(era&&!vai){ const ini=new Date(orig.pecas_desde); o.espera_pecas_seg=(+orig.espera_pecas_seg||0)+(isNaN(ini)?0:Math.max(0,(agora-ini)/1000)); o.pecas_desde=""; }
 }
@@ -644,7 +659,7 @@ let zoomAtual=null;
 function abrirZoom(k){
   zoomAtual=k; let el=document.getElementById("zoom");
   if(!el){ el=document.createElement("div"); el.id="zoom"; el.className="zoom"; el.setAttribute("role","dialog"); el.setAttribute("aria-modal","true"); document.body.append(el); }
-  const t={equip:"Equipamentos com mais OS",status:"Distribuição por status",mes:"OS recebidas × concluídas por mês"}[k];
+  const t={equip:"Equipamentos com mais OS",status:"Distribuição por status",mes:"OS por mês: recebidas, concluídas e compras"}[k];
   const c={equip:()=>topEquip(true),status:()=>donut(true),mes:()=>lineChart(true)}[k]();
   el.innerHTML=`<div class="zoom-in"><div class="zoom-top"><h2>${t}</h2><button class="btn" id="zoomx">Fechar</button></div><div class="panel">${c}</div></div>`;
   document.getElementById("zoomx").onclick=fecharZoom; document.body.style.overflow="hidden"; document.getElementById("zoomx").focus();

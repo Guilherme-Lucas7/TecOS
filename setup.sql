@@ -16,6 +16,7 @@ create table if not exists public.ordens (
   previsao_peca    date,
   pecas_desde      timestamptz,
   espera_pecas_seg bigint not null default 0,
+  pedido_peca_em   timestamptz,
   equipamento   text not null,
   descricao     text not null,
   prioridade    text not null default 'media'

@@ -15,6 +15,12 @@ alter table public.ordens add column if not exists pedido_compra text;
 alter table public.ordens add column if not exists previsao_peca date;
 alter table public.ordens add column if not exists pecas_desde timestamptz;
 alter table public.ordens add column if not exists espera_pecas_seg bigint not null default 0;
+-- Data em que a OS foi enviada para compra (fica guardada mesmo depois que a peça chega).
+alter table public.ordens add column if not exists pedido_peca_em timestamptz;
+-- OS que já passaram por compra antes desta coluna existir: data aproximada.
+update public.ordens
+   set pedido_peca_em = coalesce(pecas_desde, recebimento + make_interval(secs => greatest(0, extract(epoch from (coalesce(conclusao, now()) - recebimento)) - espera_pecas_seg)), recebimento)
+ where pedido_peca_em is null and (status = 'pecas' or espera_pecas_seg > 0);
 
 -- Guarda quando cada OS recebeu o último alerta, para não repetir toda hora.
 alter table public.ordens add column if not exists ultimo_alerta timestamptz;
