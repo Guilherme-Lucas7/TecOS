@@ -279,7 +279,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=14"></script>
+<script src="config.js?v=15"></script>
 </body>
 </html>
 <script>
@@ -298,7 +298,7 @@ const S = Object.fromEntries(STATUS.map(s=>[s.k,s])); S.aberta = S.manutencao; /
 const normStatus = o => { if(o&&o.status==="aberta") o.status="manutencao"; return o; };
 const P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
 const app = document.getElementById("app");
-let verId = null, voltarDe = "ordens";
+let verId = null, voltarDe = "ordens", bancoVelho = [];
 let sb = null, session = null, canWrite = true, ready = false, loginMsg = "", okOld = false;
 const ALERTA_PADRAO={ativo:true,topico:"",horas_urgente:120,horas_alta:120,horas_media:120,horas_baixa:120,repetir_horas:24,hora_inicio:7,hora_fim:22};
 let alerta={...ALERTA_PADRAO}, alertaPronto=false, alertaMsg="";
@@ -334,6 +334,7 @@ async function carregarAlerta(){
 async function carregar(){
   const {data,error}=await sb.from("ordens").select("*").order("abertura",{ascending:false});
   if(error){ toast("Não foi possível carregar as OS. Verifique a internet."); return; }
+  bancoVelho = data.length ? CAMPOS.filter(k=>!(k in data[0])) : [];
   ordens=data.map(r=>{const o={id:r.id}; CAMPOS.forEach(k=>o[k]=r[k]??""); return normStatus(o);}); ready=true;
   try{ localStorage.setItem("tecos-cache-"+session.user.id, JSON.stringify(ordens)); }catch(e){}
   if(view!=="nova"&&view!=="editar"&&!/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"")) render();
@@ -379,6 +380,7 @@ function vLogin(){
   <button class="link" type="button" id="esqueci">Esqueci minha senha</button>
   </form>`;
 }
+function avisoBanco(){ return bancoVelho.length?`<div class="confirm" style="display:block"><b>O banco de dados está desatualizado.</b> As peças da compra ${bancoVelho.some(c=>/solicitante|ramal/.test(c))?"e outros campos ":""}não ficam salvas até você rodar o <b>alertas.sql</b> no Supabase (SQL Editor → New query → colar → Run).<br><small>Faltam: ${bancoVelho.join(", ")}</small></div>`:""; }
 function render(){
   document.querySelector(".nav").hidden=!session;
   if(!session){ app.innerHTML=vLogin(); bindLogin(); return; }
@@ -394,6 +396,7 @@ function vDash(){
   const tile=(k,lbl,v,dot)=>`<button class="tile" data-filter="${k}"><div class="k">${dot?`<span class="sd" style="background:${dot}"></span>`:""}${lbl}</div><div class="v">${v}</div></button>`;
   return `<div class="stack">
   <div><div class="eyebrow">Painel</div><h1>Visão geral das OS</h1></div>
+  ${avisoBanco()}
   <div class="row"><button class="btn" id="exp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Exportar planilha</button>
   <button class="btn pri" data-go="nova">+ Cadastrar OS</button></div>
   ${!ready?`<div class="empty">Carregando ordens…</div>`:!ordens.length?`<div class="empty"><b>Nenhuma OS cadastrada ainda.</b><br>Toque em <b>+</b> para abrir a primeira ordem de serviço, ou em <b>Digitalizar</b> para ler uma OS em papel.</div>`:`
@@ -518,6 +521,7 @@ function vForm(){
         <button type="button" class="btn" id="padd">+ Adicionar peça</button></div>
       <div class="two">${f("pedido_compra","Nº do pedido / solicitação",0)}${f("previsao_peca","Previsão de chegada",0,"date")}</div>
       ${o.pecas_desde?`<div class="hint">Aguardando desde ${fmtDate(o.pecas_desde)} (${durC(Date.now()-new Date(o.pecas_desde))})</div>`:""}</fieldset>`; })():""}
+  ${o.status==="pecas"?avisoBanco():""}
   <div id="ferr" class="confirm" hidden></div>
   <div class="savebar"><button class="btn pri full" type="submit" ${!canWrite?"disabled":""}>${ed?"Salvar alterações":"Cadastrar OS"}</button></div>
   ${ed?(confirmDel?`<div class="confirm">Excluir esta OS de vez? <button type="button" class="btn danger" id="delyes">Excluir</button><button type="button" class="btn" id="delno">Cancelar</button></div>`:`<button type="button" class="btn danger" id="del" ${!canWrite?"disabled":""}>Excluir OS</button>`):""}
