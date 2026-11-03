@@ -229,7 +229,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=6"></script>
+<script src="config.js?v=7"></script>
 </body>
 </html>
 <script>
@@ -268,7 +268,7 @@ function pill(def){ return def?`<span class="pill" style="color:${def.c};backgro
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2600); }
 
 /* ---------- banco de dados (Supabase) ---------- */
-const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao"];
+const CAMPOS=["numero","patrimonio","abertura","recebimento","setor","localizacao","solicitante","ramal","equipamento","descricao","prioridade","status","diagnostico","servico","pecas","conclusao"];
 async function carregarAlerta(){
   const {data,error}=await sb.from("alertas_config").select("*").eq("id",1).maybeSingle();
   if(!error&&data){ alerta={...ALERTA_PADRAO,...data}; alertaPronto=true; } else alertaPronto=false;
@@ -281,7 +281,7 @@ async function carregar(){
   if(view!=="nova"&&view!=="editar"&&!/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"")) render();
 }
 async function saveOS(o){
-  const row={}; CAMPOS.forEach(k=>row[k]=(o[k]===""&&["abertura","recebimento","conclusao","patrimonio","localizacao","diagnostico","servico","pecas"].includes(k))?null:o[k]);
+  const row={}; CAMPOS.forEach(k=>row[k]=(o[k]===""&&["abertura","recebimento","conclusao","patrimonio","localizacao","diagnostico","servico","pecas","solicitante","ramal"].includes(k))?null:o[k]);
   row.atualizado_em=new Date().toISOString();
   const q=editId?sb.from("ordens").update(row).eq("id",editId):sb.from("ordens").insert(row);
   const {error}=await q; if(error) throw error; await carregar();
@@ -297,7 +297,7 @@ function go(v, id){
   render(); window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.go));
-function blank(){ const now=new Date().toISOString(); return {numero:"",patrimonio:"",abertura:now,recebimento:now,setor:"",localizacao:"",equipamento:"",descricao:"",prioridade:"media",status:"aberta",diagnostico:"",servico:"",pecas:"",conclusao:""}; }
+function blank(){ const now=new Date().toISOString(); return {numero:"",patrimonio:"",abertura:now,recebimento:now,setor:"",localizacao:"",solicitante:"",ramal:"",equipamento:"",descricao:"",prioridade:"media",status:"aberta",diagnostico:"",servico:"",pecas:"",conclusao:""}; }
 
 /* ---------- telas ---------- */
 function vLogin(){
@@ -378,7 +378,7 @@ function lineChart(big){
 function filtered(){
   const q=filt.q.trim().toLowerCase();
   return ordens.filter(o=>(filt.status==="todas"||o.status===filt.status||(filt.status==="atrasadas"&&atrasada(o)))&&(filt.prio==="todas"||o.prioridade===filt.prio)&&
-    (!q||[o.numero,o.equipamento,o.patrimonio,o.setor,o.localizacao,o.descricao].some(v=>String(v||"").toLowerCase().includes(q))))
+    (!q||[o.numero,o.equipamento,o.patrimonio,o.setor,o.localizacao,o.solicitante,o.ramal,o.descricao].some(v=>String(v||"").toLowerCase().includes(q))))
     .sort((a,b)=>{const open=x=>x.status==="concluida"?1:0; return open(a)-open(b)||new Date(b.abertura||0)-new Date(a.abertura||0);});
 }
 function card(o){
@@ -387,6 +387,7 @@ function card(o){
     <div class="eq">${esc(o.equipamento||"Equipamento não informado")}</div>
     ${o.descricao?`<div class="ds">${esc(o.descricao)}</div>`:""}
     <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${atrasada(o)?" old":""}">${atrasada(o)?"Atrasada · ":"⏱ "}${dur(elapsed(o))}</span></div>
+    ${o.solicitante||o.ramal?`<div class="dates">${o.solicitante?"Solicitante: "+esc(o.solicitante):""}${o.solicitante&&o.ramal?" · ":""}${o.ramal?"Ramal "+esc(o.ramal):""}</div>`:""}
     <div class="dates">Recebida ${fmtDate(o.recebimento||o.abertura)}${o.status==="concluida"&&o.conclusao?" · Concluída "+fmtDate(o.conclusao):""}</div>
   </button>`;
 }
@@ -415,10 +416,12 @@ function vForm(){
     <div class="two">${f("numero","Número da OS",1)}${f("patrimonio","Nº de patrimônio (opcional)",0)}</div>
     <div class="two">${f("abertura","Data de abertura",1,"datetime-local")}${f("recebimento","Recebimento pelo técnico",1,"datetime-local")}</div>
     <div class="two">${f("setor","Setor",1,"text",'list="dl-setor"')}${f("localizacao","Localização",0)}</div>
+    <div class="two">${f("solicitante","Nome do solicitante",0,"text",'list="dl-solic" autocomplete="off"')}${f("ramal","Ramal do local",0,"tel",'inputmode="numeric" placeholder="Ex.: 4521"')}</div>
     ${f("equipamento","Equipamento",1,"text",'list="dl-equip"')}
     ${t("descricao","Descrição do problema",1)}
   </fieldset>
   <datalist id="dl-setor">${[...new Set(ordens.map(x=>x.setor).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
+  <datalist id="dl-solic">${[...new Set(ordens.map(x=>x.solicitante).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
   <datalist id="dl-equip">${[...new Set(ordens.map(x=>x.equipamento).filter(Boolean))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist>
   <fieldset><legend>Andamento</legend>
     <div class="field"><label>Prioridade</label>${chips("prioridade",PRIO)}</div>
@@ -545,6 +548,12 @@ function bind(){
   const exp=document.getElementById("exp"); if(exp) exp.onclick=exportCSV;
   const form=document.getElementById("form");
   if(form){
+    const sugereRamal=()=>{ const r=document.getElementById("f-ramal"); const sv=document.getElementById("f-setor")?.value||"", lv=document.getElementById("f-localizacao")?.value||"";
+      if(!r||r.value.trim()||!sv.trim()) return;
+      const st=sv.trim().toLowerCase(), lc=lv.trim().toLowerCase();
+      const ant=ordens.filter(x=>x.ramal&&String(x.setor||"").trim().toLowerCase()===st).sort((a,b)=>(lc&&String(b.localizacao||"").trim().toLowerCase()===lc)-(lc&&String(a.localizacao||"").trim().toLowerCase()===lc)||new Date(b.abertura||0)-new Date(a.abertura||0))[0];
+      if(ant){ r.value=ant.ramal; draft.ramal=ant.ramal; } };
+    ["f-setor","f-localizacao"].forEach(id=>document.getElementById(id)?.addEventListener("change",sugereRamal));
     form.querySelectorAll("input,textarea").forEach(el=>{ el.oninput=el.onchange=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(elapsed(draft)); okOld=false;}; });
     form.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{draft[b.dataset.set]=b.dataset.v;
       if(b.dataset.set==="status"&&b.dataset.v==="concluida"&&!draft.conclusao) draft.conclusao=new Date().toISOString();
@@ -565,7 +574,7 @@ function bind(){
       const {_ocr, _texto, ...clean}=draft; const now=new Date().toISOString();
       const o={...clean};
       try{ await saveOS(o); toast(editId?"OS atualizada":"OS cadastrada"); go("ordens"); }
-      catch(x){ err.hidden=false; err.textContent=x?.code==="23505"?"Já existe uma OS com o número "+draft.numero+".":"Não foi possível salvar. Verifique a internet e tente de novo."; }
+      catch(x){ err.hidden=false; err.textContent=x?.code==="23505"?"Já existe uma OS com o número "+draft.numero+".":(x?.code==="PGRST204"||/solicitante|ramal/.test(x?.message||""))?"Falta ativar Solicitante e Ramal no banco: rode de novo o alertas.sql no Supabase (SQL Editor).":"Não foi possível salvar. Verifique a internet e tente de novo."; }
     };
     const del=document.getElementById("del"); if(del) del.onclick=()=>{confirmDel=true; render();};
     const dn=document.getElementById("delno"); if(dn) dn.onclick=()=>{confirmDel=false; render();};
@@ -590,6 +599,8 @@ function extrair(txt){
   d.numero=pick(/(?:\bO\.?\s?S\.?|ordem(?: de servi[cç]o)?)\s*(?:n[º°o.]*|:|-)?\s*[:#]?\s*([A-Z0-9][\w\-\/]{1,20})/i);
   d.patrimonio=pick(/patrim[oô]nio\s*(?:n[º°o.]*)?\s*[:\-]?\s*([\w\-\/]{2,20})/i);
   d.setor=pick(/setor\s*[:\-]\s*(.+)/i);
+  d.solicitante=pick(/(?:solicitante|requisitante|solicitado por)\s*[:\-]\s*(.+)/i);
+  d.ramal=pick(/ramal\s*[:\-]?\s*(\d{3,6})/i);
   d.localizacao=pick(/(?:local(?:iza[cç][aã]o)?|sala|leito)\s*[:\-]\s*(.+)/i);
   d.equipamento=pick(/equipamento\s*[:\-]\s*(.+)/i);
   d.descricao=pick(/(?:defeito|problema|descri[cç][aã]o|ocorr[eê]ncia)[^:]*[:\-]\s*(.+)/i);
@@ -616,7 +627,7 @@ function go2form(){ document.querySelectorAll(".nav button").forEach(b=>b.setAtt
 
 /* ---------- exportar ---------- */
 async function exportCSV(){
-  const cols=[["numero","Nº OS"],["patrimonio","Patrimônio"],["abertura","Abertura"],["recebimento","Recebimento"],["setor","Setor"],["localizacao","Localização"],["equipamento","Equipamento"],["descricao","Descrição do problema"],["prioridade","Prioridade"],["status","Status"],["diagnostico","Diagnóstico"],["servico","Serviço realizado"],["pecas","Peças"],["conclusao","Conclusão"],["_tempo","Tempo decorrido"]];
+  const cols=[["numero","Nº OS"],["patrimonio","Patrimônio"],["abertura","Abertura"],["recebimento","Recebimento"],["setor","Setor"],["localizacao","Localização"],["solicitante","Solicitante"],["ramal","Ramal"],["equipamento","Equipamento"],["descricao","Descrição do problema"],["prioridade","Prioridade"],["status","Status"],["diagnostico","Diagnóstico"],["servico","Serviço realizado"],["pecas","Peças"],["conclusao","Conclusão"],["_tempo","Tempo decorrido"]];
   const val=(o,k)=>k==="_tempo"?dur(elapsed(o)):k==="status"?S[o.status]?.n:k==="prioridade"?P[o.prioridade]?.n:["abertura","recebimento","conclusao"].includes(k)?(o[k]?fmtDate(o[k]):""):o[k];
   const cell=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
   const csv="﻿"+[cols.map(c=>cell(c[1])).join(";"),...ordens.map(o=>cols.map(c=>cell(val(o,c[0]))).join(";"))].join("\r\n");

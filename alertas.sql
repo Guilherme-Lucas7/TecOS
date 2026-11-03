@@ -5,6 +5,10 @@
 create extension if not exists pg_net with schema extensions;
 create extension if not exists pg_cron;
 
+-- Campos do solicitante da OS.
+alter table public.ordens add column if not exists solicitante text;
+alter table public.ordens add column if not exists ramal text;
+
 -- Guarda quando cada OS recebeu o último alerta, para não repetir toda hora.
 alter table public.ordens add column if not exists ultimo_alerta timestamptz;
 
@@ -82,7 +86,8 @@ begin
         c,
         'OS ' || o.numero || ' atrasada',
         o.equipamento || ' · ' || o.setor
-          || coalesce(' · ' || nullif(o.localizacao, ''), '') || E'\n'
+          || coalesce(' · ' || nullif(o.localizacao, ''), '')
+          || coalesce(' · Ramal ' || nullif(o.ramal, ''), '') || E'\n'
           || 'Sem finalizar há ' || public.tecos_fmt(o.idade)
           || ' (prazo ' || case o.prioridade when 'urgente' then 'urgente' when 'alta' then 'alta'
                                              when 'baixa' then 'baixa' else 'média' end

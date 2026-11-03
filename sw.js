@@ -1,7 +1,7 @@
 // TecOS — abre na hora, mesmo com internet lenta ou sem internet.
 // Guarda no aparelho os arquivos do app e as bibliotecas; os dados (Supabase) não passam por aqui.
-const CACHE = "tecos-v1";
-const ARQUIVOS = ["./", "index.html", "config.js?v=6", "manifest.json", "icon.svg", "icon-180.png", "icon-512.png"];
+const CACHE = "tecos-v2";
+const ARQUIVOS = ["./", "index.html", "config.js?v=7", "manifest.json", "icon.svg", "icon-180.png", "icon-512.png"];
 const EXTERNOS = ["https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"];
 const CDN = /^https:\/\/(cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)\//;
 

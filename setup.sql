@@ -9,6 +9,8 @@ create table if not exists public.ordens (
   recebimento   timestamptz not null,
   setor         text not null,
   localizacao   text,
+  solicitante   text,
+  ramal         text,
   equipamento   text not null,
   descricao     text not null,
   prioridade    text not null default 'media'
