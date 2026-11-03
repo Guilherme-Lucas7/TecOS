@@ -134,6 +134,21 @@ legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-tr
 .cp b{display:block;font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--s-pecas)}
 .cp span{font-size:12px;color:var(--muted)}
 .cp .vence b{color:var(--p-urg)}
+.ver-cab{display:grid;gap:4px}
+.ver-cab .t{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.ver-desc{margin:8px 0 0;font-size:16px;line-height:1.5;max-width:65ch}
+.dl{margin:0;display:grid;gap:0}
+.dl-r{display:grid;grid-template-columns:minmax(0,40%) 1fr;gap:12px;padding:9px 0;border-top:1px solid var(--line)}
+.dl-r:first-child,.dl-b:first-child{border-top:0;padding-top:0}
+.dl dt{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.dl-r dt{align-self:center}
+.dl-b{display:grid;gap:4px;padding:10px 0;border-top:1px solid var(--line)}
+.vazio{color:var(--muted);font-style:italic}
+.pausa-t{border-color:var(--s-pecas)}
+.pausa-t .k{color:var(--s-pecas)}
+.compra-v{border-color:var(--s-pecas)}
+.compra-v h2{color:var(--s-pecas)}
 .compra{display:grid;gap:12px;border:1px solid var(--s-pecas);background:var(--s-pecas-bg);border-radius:14px;padding:14px}
 .compra-t{display:flex;gap:8px;align-items:center;font-weight:700;color:var(--s-pecas)}
 .est-sec{display:grid;gap:4px;min-width:0}
@@ -254,7 +269,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=11"></script>
+<script src="config.js?v=12"></script>
 </body>
 </html>
 <script>
@@ -272,6 +287,7 @@ const PRIO = [
 ];
 const S = Object.fromEntries(STATUS.map(s=>[s.k,s])), P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
 const app = document.getElementById("app");
+let verId = null, voltarDe = "ordens";
 let sb = null, session = null, canWrite = true, ready = false, loginMsg = "", okOld = false;
 const ALERTA_PADRAO={ativo:true,topico:"",horas_urgente:120,horas_alta:120,horas_media:120,horas_baixa:120,repetir_horas:24,hora_inicio:7,hora_fim:22};
 let alerta={...ALERTA_PADRAO}, alertaPronto=false, alertaMsg="";
@@ -321,7 +337,8 @@ function go(v, id){
   view=v; confirmDel=false;
   if(v==="nova"){ editId=null; draft=blank(); }
   if(v==="editar"){ editId=id; const o=ordens.find(x=>x.id===id); draft=o?{...o}:blank(); }
-  document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.go===(v==="editar"?"ordens":v)?"page":"false"));
+  if(v==="ver") verId=id;
+  document.querySelectorAll(".nav button").forEach(b=>b.setAttribute("aria-current", b.dataset.go===(["editar","ver"].includes(v)?"ordens":v)?"page":"false"));
   render(); window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.go));
@@ -342,7 +359,7 @@ function render(){
   document.querySelector(".nav").hidden=!session;
   if(!session){ app.innerHTML=vLogin(); bindLogin(); return; }
   document.getElementById("sino")?.setAttribute("aria-current",view==="alertas"?"page":"false");
-  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec, alertas:vAlertas, estatisticas:vEst, compras:vCompras}[view]||vDash;
+  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec, alertas:vAlertas, estatisticas:vEst, compras:vCompras, ver:vVer}[view]||vDash;
   app.innerHTML=f(); bind();
 }
 
@@ -447,7 +464,7 @@ function vForm(){
   const t=(id,lbl,req)=>`<div class="field"><label for="f-${id}">${lbl}${req?" <i>*</i>":""}</label><textarea id="f-${id}" name="${id}">${esc(o[id])}</textarea></div>`;
   const chips=(grp,defs)=>`<div class="chips" style="flex-wrap:wrap">${defs.map(d=>`<button type="button" class="chip" data-set="${grp}" data-v="${d.k}" aria-pressed="${o[grp]===d.k}">${d.n}</button>`).join("")}</div>`;
   return `<form class="stack" id="form" novalidate>
-  <div><button type="button" class="link" data-go="${ed?"ordens":"dashboard"}" style="padding-left:0">← Voltar</button>
+  <div>${ed?`<button type="button" class="link" data-open="${esc(editId)}" style="padding-left:0">← Cancelar edição</button>`:`<button type="button" class="link" data-go="dashboard" style="padding-left:0">← Voltar</button>`}
   <h1>${ed?"OS "+esc(o.numero||""):"Nova ordem de serviço"}</h1>${draft._ocr?`<div class="note">Campos preenchidos a partir da foto. Confira cada um antes de salvar.${draft._texto?`<details style="margin-top:6px"><summary>Ver texto lido da foto</summary><pre style="white-space:pre-wrap;font-family:var(--f-mono);font-size:12px">${esc(draft._texto)}</pre></details>`:""}</div>`:""}</div>
   <fieldset><legend>Identificação</legend>
     <div class="two">${f("numero","Número da OS",1)}${f("patrimonio","Nº de patrimônio (opcional)",0)}</div>
@@ -601,6 +618,43 @@ function vEst(){
   </div>`;
 }
 
+/* ---------- OS (visualização) ---------- */
+function vVer(){
+  const o=ordens.find(x=>x.id===verId);
+  if(!o) return `<div class="stack"><button class="link" data-voltar style="padding-left:0;justify-self:start">← Voltar</button><div class="empty">${ready?"Esta OS não foi encontrada. Ela pode ter sido excluída.":"Carregando…"}</div></div>`;
+  const fmtD=d=>{ const [y,m,dd]=String(d||"").split("-"); return dd&&m?`${dd}/${m}/${y}`:"—"; };
+  const lin=(k,v,mono)=>v?`<div class="dl-r"><dt>${k}</dt><dd${mono?' class="num"':""}>${v}</dd></div>`:"";
+  const txt=(k,v)=>`<div class="dl-b"><dt>${k}</dt><dd>${v?esc(v).replace(/\n/g,"<br>"):'<span class="vazio">Não preenchido</span>'}</dd></div>`;
+  const ep=esperaPeca(o), cp=o.status==="pecas";
+  return `<div class="stack ver">
+  <div class="row" style="justify-content:space-between"><button class="link" data-voltar style="padding-left:0">← Voltar</button>
+    <button class="btn pri" data-edit="${esc(o.id)}" ${!canWrite?"disabled":""}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>Editar</button></div>
+  <div class="ver-cab">
+    <div class="t"><span class="num">OS ${esc(o.numero||"s/ nº")}</span>${pill(S[o.status])}</div>
+    <h1 style="margin:2px 0 4px">${esc(o.equipamento||"Equipamento não informado")}</h1>
+    <div class="row" style="gap:8px">${pill(P[o.prioridade])}${atrasada(o)?`<span class="pill" style="color:var(--p-urg);background:var(--p-urg-bg)">Atrasada</span>`:""}</div>
+    ${o.descricao?`<p class="ver-desc">${esc(o.descricao).replace(/\n/g,"<br>")}</p>`:""}
+  </div>
+  <div class="tiles">
+    <div class="tile${cp?" pausa-t":""}"><div class="k">Atendimento${cp?" · parado":""}</div><div class="v sm">${durC(tecnico(o))}</div><div class="h">${o.status==="concluida"?"concluída":cp?"aguardando peça":"em andamento"}</div></div>
+    ${ep>0?`<div class="tile pausa-t"><div class="k">Compra</div><div class="v sm">${durC(ep)}</div><div class="h">${cp?"esperando a peça":"tempo esperando peça"}</div></div>
+    <div class="tile"><div class="k">Total</div><div class="v sm">${durC(elapsed(o))}</div><div class="h">atendimento + compra</div></div>`:""}
+  </div>
+  <div class="panel"><h2>Identificação</h2><dl class="dl">
+    ${lin("Patrimônio",esc(o.patrimonio),1)}${lin("Setor",esc(o.setor))}${lin("Localização",esc(o.localizacao))}
+    ${lin("Solicitante",esc(o.solicitante))}${lin("Ramal",esc(o.ramal),1)}
+    ${lin("Abertura",fmtDate(o.abertura))}${lin("Recebimento",fmtDate(o.recebimento))}${o.conclusao?lin("Conclusão",fmtDate(o.conclusao)):""}
+  </dl></div>
+  ${cp||o.peca_necessaria?`<div class="panel compra-v"><h2>Compra de peça</h2><dl class="dl">
+    ${lin("Peça",esc(o.peca_necessaria||"—"))}${lin("Pedido",esc(o.pedido_compra),1)}${o.previsao_peca?lin("Previsão",fmtD(o.previsao_peca)):""}
+    ${o.pedido_peca_em?lin("Enviada para compra",fmtDate(o.pedido_peca_em)):""}${cp?lin("Situação","Aguardando a peça"):lin("Situação","Peça recebida")}
+  </dl>${cp?`<button class="btn pri" data-chegou="${esc(o.id)}" style="margin-top:12px">Peça chegou</button>`:""}</div>`:""}
+  <div class="panel"><h2>Serviço</h2><dl class="dl">
+    ${txt("Diagnóstico técnico",o.diagnostico)}${txt("Serviço realizado",o.servico)}${txt("Peças utilizadas",o.pecas)}
+  </dl></div>
+  </div>`;
+}
+
 /* ---------- compras (aguardando peça) ---------- */
 function transicaoPeca(orig,o){
   const agora=new Date(), era=orig?.status==="pecas", vai=o.status==="pecas";
@@ -710,7 +764,9 @@ document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&zoomAtual) fecharZ
 /* ---------- eventos ---------- */
 function bind(){
   app.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
-  app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>go("editar",b.dataset.open));
+  app.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{ if(view!=="ver"&&view!=="editar") voltarDe=view; go("ver",b.dataset.open); });
+  app.querySelectorAll("[data-edit]").forEach(b=>b.onclick=()=>go("editar",b.dataset.edit));
+  app.querySelectorAll("[data-voltar]").forEach(b=>b.onclick=()=>go(voltarDe||"ordens"));
   app.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{filt={q:"",status:b.dataset.filter,prio:"todas"}; go("ordens");});
   app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{filt[b.dataset.f]=b.dataset.v; render();});
   app.querySelectorAll("[data-zoom]").forEach(b=>b.onclick=()=>abrirZoom(b.dataset.zoom));
@@ -749,12 +805,12 @@ function bind(){
       if(dup){ err.hidden=false; err.textContent="Já existe uma OS com o número "+draft.numero+"."; return; }
       const {_ocr, _texto, ...clean}=draft; const now=new Date().toISOString();
       const o={...clean}; transicaoPeca(editId?ordens.find(x=>x.id===editId):null,o);
-      try{ await saveOS(o); toast(editId?"OS atualizada":"OS cadastrada"); go("ordens"); }
+      try{ const era=editId; await saveOS(o); toast(era?"OS atualizada":"OS cadastrada"); if(era) go("ver",era); else go("ordens"); }
       catch(x){ err.hidden=false; err.textContent=x?.code==="23505"?"Já existe uma OS com o número "+draft.numero+".":(x?.code==="PGRST204"||/solicitante|ramal|peca_|pedido_|espera_|pecas_desde/.test(x?.message||""))?"Faltam campos novos no banco: rode de novo o alertas.sql no Supabase (SQL Editor).":"Não foi possível salvar. Verifique a internet e tente de novo."; }
     };
     const del=document.getElementById("del"); if(del) del.onclick=()=>{confirmDel=true; render();};
     const dn=document.getElementById("delno"); if(dn) dn.onclick=()=>{confirmDel=false; render();};
-    const dy=document.getElementById("delyes"); if(dy) dy.onclick=async()=>{try{await deleteOS(editId); toast("OS excluída"); go("ordens");}catch(x){toast("Não foi possível excluir.");}};
+    const dy=document.getElementById("delyes"); if(dy) dy.onclick=async()=>{try{await deleteOS(editId); toast("OS excluída"); go(voltarDe&&voltarDe!=="ver"?voltarDe:"ordens");}catch(x){toast("Não foi possível excluir.");}};
   }
   bindAlertas();
   ["cam","pick"].forEach(id=>{const i=document.getElementById(id); if(i) i.onchange=()=>i.files[0]&&readPhoto(i.files[0]);});
