@@ -9,6 +9,10 @@ create extension if not exists pg_cron;
 alter table public.ordens add column if not exists solicitante text;
 alter table public.ordens add column if not exists ramal text;
 
+-- "Aberta" foi unificada com "Em manutenção": a OS entra direto em manutenção.
+update public.ordens set status = 'manutencao' where status = 'aberta';
+alter table public.ordens alter column status set default 'manutencao';
+
 -- Compra de peças: o que falta, pedido, previsão e quanto tempo a OS esperou pela peça.
 alter table public.ordens add column if not exists peca_necessaria text;
 alter table public.ordens add column if not exists pedido_compra text;

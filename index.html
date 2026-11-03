@@ -79,6 +79,7 @@ h2{font-size:17px;font-weight:700;margin:0 0 12px}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px}
 .tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 @media (min-width:640px){.tiles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.tiles .tile.wide{grid-column:span 2}
 .tile{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;text-align:left}
 .tile .k{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);display:flex;gap:6px;align-items:center}
 .tile .v{font-size:34px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;line-height:1.15;margin-top:4px}
@@ -269,12 +270,11 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=12"></script>
+<script src="config.js?v=13"></script>
 </body>
 </html>
 <script>
 const STATUS = [
-  {k:"aberta", n:"Aberta", c:"var(--s-aberta)", bg:"var(--s-aberta-bg)"},
   {k:"manutencao", n:"Em manutenção", c:"var(--s-manut)", bg:"var(--s-manut-bg)"},
   {k:"pecas", n:"Aguardando peças", c:"var(--s-pecas)", bg:"var(--s-pecas-bg)"},
   {k:"concluida", n:"Concluída", c:"var(--s-concl)", bg:"var(--s-concl-bg)"},
@@ -285,7 +285,9 @@ const PRIO = [
   {k:"alta", n:"Alta", c:"var(--p-alta)", bg:"var(--s-aberta-bg)"},
   {k:"urgente", n:"Urgente", c:"var(--p-urg)", bg:"var(--p-urg-bg)"},
 ];
-const S = Object.fromEntries(STATUS.map(s=>[s.k,s])), P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
+const S = Object.fromEntries(STATUS.map(s=>[s.k,s])); S.aberta = S.manutencao; // "Aberta" foi unificada com "Em manutenção"
+const normStatus = o => { if(o&&o.status==="aberta") o.status="manutencao"; return o; };
+const P = Object.fromEntries(PRIO.map(p=>[p.k,p]));
 const app = document.getElementById("app");
 let verId = null, voltarDe = "ordens";
 let sb = null, session = null, canWrite = true, ready = false, loginMsg = "", okOld = false;
@@ -319,7 +321,7 @@ async function carregarAlerta(){
 async function carregar(){
   const {data,error}=await sb.from("ordens").select("*").order("abertura",{ascending:false});
   if(error){ toast("Não foi possível carregar as OS. Verifique a internet."); return; }
-  ordens=data.map(r=>{const o={id:r.id}; CAMPOS.forEach(k=>o[k]=r[k]??""); return o;}); ready=true;
+  ordens=data.map(r=>{const o={id:r.id}; CAMPOS.forEach(k=>o[k]=r[k]??""); return normStatus(o);}); ready=true;
   try{ localStorage.setItem("tecos-cache-"+session.user.id, JSON.stringify(ordens)); }catch(e){}
   if(view!=="nova"&&view!=="editar"&&!/INPUT|TEXTAREA/.test(document.activeElement?.tagName||"")) render();
 }
@@ -342,7 +344,7 @@ function go(v, id){
   render(); window.scrollTo(0,0);
 }
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>go(b.dataset.go));
-function blank(){ const now=new Date().toISOString(); return {numero:"",patrimonio:"",abertura:now,recebimento:now,setor:"",localizacao:"",solicitante:"",ramal:"",peca_necessaria:"",pedido_compra:"",previsao_peca:"",pecas_desde:"",espera_pecas_seg:0,equipamento:"",descricao:"",prioridade:"media",status:"aberta",diagnostico:"",servico:"",pecas:"",conclusao:""}; }
+function blank(){ const now=new Date().toISOString(); return {numero:"",patrimonio:"",abertura:now,recebimento:now,setor:"",localizacao:"",solicitante:"",ramal:"",peca_necessaria:"",pedido_compra:"",previsao_peca:"",pecas_desde:"",espera_pecas_seg:0,equipamento:"",descricao:"",prioridade:"media",status:"manutencao",diagnostico:"",servico:"",pecas:"",conclusao:""}; }
 
 /* ---------- telas ---------- */
 function vLogin(){
@@ -376,11 +378,10 @@ function vDash(){
   ${(()=>{const n=ordens.filter(atrasada).length; return n?`<button class="atraso" data-filter="atrasadas"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"/></svg><span><b>${n} OS atrasada${n>1?"s":""}</b><br><small>Passaram do prazo da prioridade sem ser finalizadas</small></span><span class="go">Ver →</span></button>`:""})()}
   <div class="tiles">
     ${tile("todas","Total de OS",ordens.length)}
-    ${tile("aberta","Abertas",c("aberta"),S.aberta.c)}
     ${tile("manutencao","Em manutenção",c("manutencao"),S.manutencao.c)}
     <button class="tile" data-go="compras"><div class="k"><span class="sd" style="background:${S.pecas.c}"></span>Aguard. peças</div><div class="v">${c("pecas")}</div><div class="h" style="color:var(--accent-text);font-weight:600">Ver compras →</div></button>
     ${tile("concluida","Concluídas",c("concluida"),S.concluida.c)}
-    <button class="tile" data-go="estatisticas"><div class="k">Tempo médio</div><div class="v sm">${durC(media)}</div><div class="h">de atendimento, sem a compra (${conc.length} OS)</div><div class="h" style="color:var(--accent-text);font-weight:600;margin-top:4px">Ver estatísticas →</div></button>
+    <button class="tile wide" data-go="estatisticas"><div class="k">Tempo médio</div><div class="v sm">${durC(media)}</div><div class="h">de atendimento, sem a compra (${conc.length} OS)</div><div class="h" style="color:var(--accent-text);font-weight:600;margin-top:4px">Ver estatísticas →</div></button>
   </div>
   ${(()=>{ const ag=ordens.filter(o=>o.status==="pecas"); if(!ag.length&&!ordens.some(o=>o.pedido_peca_em)) return "";
     const hoje=new Date(); hoje.setHours(0,0,0,0); const venc=ag.filter(o=>o.previsao_peca&&new Date(o.previsao_peca+"T00:00:00")<hoje).length;
@@ -909,7 +910,7 @@ document.getElementById("logout").onclick=()=>sb.auth.signOut();
     if(ev==="PASSWORD_RECOVERY"){ const nova=window.prompt("Digite sua nova senha (mínimo 6 caracteres):"); if(nova){ const {error}=await sb.auth.updateUser({password:nova}); toast(error?"Não foi possível trocar a senha.":"Senha alterada."); } }
     const had=!!session; session=sess; loginMsg="";
     const who=document.getElementById("who"); who.hidden=!session; document.getElementById("sino").hidden=!session; document.getElementById("whoemail").textContent=session?.user?.email||"";
-    if(session&&!had){ carregarAlerta().then(()=>{ if(view!=="nova"&&view!=="editar") render(); }); ready=false; try{ const c=JSON.parse(localStorage.getItem("tecos-cache-"+session.user.id)||"null"); if(Array.isArray(c)){ ordens=c; ready=true; } }catch(e){} go("dashboard"); carregar(); }
+    if(session&&!had){ carregarAlerta().then(()=>{ if(view!=="nova"&&view!=="editar") render(); }); ready=false; try{ const c=JSON.parse(localStorage.getItem("tecos-cache-"+session.user.id)||"null"); if(Array.isArray(c)){ ordens=c.map(normStatus); ready=true; } }catch(e){} go("dashboard"); carregar(); }
     if(!session){ ordens=[]; ready=false; try{ Object.keys(localStorage).filter(k=>k.startsWith("tecos-cache-")).forEach(k=>localStorage.removeItem(k)); }catch(e){} render(); }
   });
   const {data}=await sb.auth.getSession(); if(!data.session) render();
