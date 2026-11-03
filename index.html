@@ -124,7 +124,22 @@ legend{padding:0 6px;font-size:13px;font-weight:700;letter-spacing:.12em;text-tr
 .bars{display:grid;gap:8px}
 .barrow{display:grid;grid-template-columns:minmax(0,38%) 1fr auto;gap:10px;align-items:center;font-size:14px}
 .barrow span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
-.bartrack{height:14px;background:var(--bg);border-radius:6px;overflow:hidden}
+.bartrack{height:14px;background:var(--bg);border-radius:6px;overflow:hidden;position:relative}
+.prazo{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--p-urg);opacity:.9}
+.est-sec{display:grid;gap:4px;min-width:0}
+.est-sec>*{min-width:0}
+.est-sec .gitem b{flex:none}
+.est-sec .h2s{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.est-sec .sub{font-size:13px;color:var(--muted)}
+.hb{display:grid;gap:10px}
+.hbrow{display:grid;grid-template-columns:minmax(0,34%) 1fr auto;gap:10px;align-items:center;font-size:14px}
+.hbrow .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--fg)}
+.hbrow .val{font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right;color:var(--fg)}
+.hbrow .val small{color:var(--muted);font-weight:400}
+.hbrow .bartrack{height:16px}
+.hbrow .barfill{background:var(--accent);border-radius:0 5px 5px 0}
+.hbrow .barfill.late{background:var(--p-urg)}
+.legend .pz{width:2px;height:12px;background:var(--p-urg);display:inline-block}
 .barfill{height:100%;background:var(--fg);border-radius:6px}
 .barrow b{font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:13px;color:var(--muted)}
@@ -229,7 +244,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=7"></script>
+<script src="config.js?v=8"></script>
 </body>
 </html>
 <script>
@@ -314,7 +329,7 @@ function render(){
   document.querySelector(".nav").hidden=!session;
   if(!session){ app.innerHTML=vLogin(); bindLogin(); return; }
   document.getElementById("sino")?.setAttribute("aria-current",view==="alertas"?"page":"false");
-  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec, alertas:vAlertas}[view]||vDash;
+  const f={dashboard:vDash, ordens:vList, nova:vForm, editar:vForm, digitalizar:vScan, recorrentes:vRec, alertas:vAlertas, estatisticas:vEst}[view]||vDash;
   app.innerHTML=f(); bind();
 }
 
@@ -335,7 +350,7 @@ function vDash(){
     ${tile("manutencao","Em manutenção",c("manutencao"),S.manutencao.c)}
     ${tile("pecas","Aguard. peças",c("pecas"),S.pecas.c)}
     ${tile("concluida","Concluídas",c("concluida"),S.concluida.c)}
-    <div class="tile"><div class="k">Tempo médio</div><div class="v sm">${dur(media)}</div><div class="h">recebimento → conclusão (${conc.length} OS)</div></div>
+    <button class="tile" data-go="estatisticas"><div class="k">Tempo médio</div><div class="v sm">${durC(media)}</div><div class="h">recebimento → conclusão (${conc.length} OS)</div><div class="h" style="color:var(--accent-text);font-weight:600;margin-top:4px">Ver estatísticas →</div></button>
   </div>
   <button class="panel zoomable" data-zoom="equip" aria-label="Ampliar gráfico de equipamentos com mais OS"><h2>Equipamentos com mais OS<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${topEquip()}</button>
   <button class="panel zoomable" data-zoom="status" aria-label="Ampliar gráfico de distribuição por status"><h2>Distribuição por status<span class="zoomhint" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg></span></h2>${donut()}</button>
@@ -453,6 +468,71 @@ function vScan(){
   </div>`;
 }
 
+/* ---------- estatísticas de fechamento ---------- */
+let estPer=180;
+function durC(ms){ if(!(ms>0)) return "—"; const m=Math.round(ms/6e4), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return d?`${d}d ${h}h`:h?`${h}h ${mm}m`:`${mm}m`; }
+function mediana(a){ if(!a.length) return 0; const b=a.slice().sort((x,y)=>x-y), k=b.length>>1; return b.length%2?b[k]:(b[k-1]+b[k])/2; }
+function hbars(rows,{max,prazo}={}){
+  const mx=max||Math.max(1,...rows.map(r=>Math.max(r.v,r.pz||0)));
+  return `<div class="hb">${rows.map(r=>`<div class="hbrow" title="${esc(r.n)}: ${esc(r.tip||"")}"><span class="n">${esc(r.n)}</span><div class="bartrack"><div class="barfill${r.late?" late":""}" style="width:${Math.max(2,r.v/mx*100)}%"></div>${r.pz?`<span class="prazo" style="left:calc(${Math.min(100,r.pz/mx*100)}% - 1px)"></span>`:""}</div><span class="val">${r.lbl}</span></div>`).join("")}</div>`;
+}
+function vEst(){
+  const agora=Date.now(), lim=estPer?agora-estPer*864e5:0;
+  const todas=ordens.filter(o=>o.status==="concluida"&&o.conclusao&&!isNaN(new Date(o.conclusao))&&elapsed(o)>0);
+  const conc=todas.filter(o=>new Date(o.conclusao).getTime()>=lim);
+  const t=conc.map(elapsed), soma=t.reduce((a,b)=>a+b,0), media=t.length?soma/t.length:0;
+  const noPrazo=conc.filter(o=>elapsed(o)<=limiteHoras(o)*36e5).length;
+  const abertas=ordens.filter(o=>o.status!=="concluida"), idade=abertas.length?abertas.reduce((a,o)=>a+elapsed(o),0)/abertas.length:0;
+  const per=[[30,"30 dias"],[90,"90 dias"],[180,"6 meses"],[365,"1 ano"],[0,"Tudo"]];
+  const head=`<div><div class="eyebrow">Estatísticas</div><h1>Tempo de fechamento das OS</h1><p class="lead">Tempo entre o recebimento pelo técnico e a conclusão, nas OS concluídas no período.</p></div>
+  <div class="chips">${per.map(([d,n])=>`<button class="chip" data-eper="${d}" aria-pressed="${estPer===d}">${n}</button>`).join("")}</div>`;
+  if(!conc.length) return `<div class="stack">${head}<div class="empty"><b>Nenhuma OS concluída neste período.</b><br>Ao concluir uma OS, informe a <b>data de conclusão</b>; ela entra aqui automaticamente.${todas.length?"<br>Escolha um período maior para ver as OS mais antigas.":""}</div>
+  ${abertas.length?`<div class="tiles"><div class="tile"><div class="k">Em aberto agora</div><div class="v">${abertas.length}</div><div class="h">idade média ${durC(idade)}</div></div></div>`:""}</div>`;
+  const pct=Math.round(noPrazo/conc.length*100);
+  const tile=(k,v,h,extra="")=>`<div class="tile"${extra}><div class="k">${k}</div><div class="v sm">${v}</div>${h?`<div class="h">${h}</div>`:""}</div>`;
+  // por mês (12 meses, sempre)
+  const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"], now=new Date(), meses=[];
+  for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); meses.push({y:d.getFullYear(),m:d.getMonth(),s:0,n:0}); }
+  todas.forEach(o=>{ const d=new Date(o.conclusao), x=meses.find(q=>q.y===d.getFullYear()&&q.m===d.getMonth()); if(x){ x.s+=elapsed(o); x.n++; } });
+  const pzs=[alerta.horas_urgente,alerta.horas_alta,alerta.horas_media,alerta.horas_baixa], pzUnico=pzs.every(v=>v===pzs[0])?pzs[0]*36e5:0;
+  const W=340,H=190,L=34,R=8,T=16,B=26, iw=W-L-R, ih=H-T-B;
+  const mxv=Math.max(pzUnico,...meses.map(q=>q.n?q.s/q.n:0),864e5); const dias=Math.ceil(mxv/864e5); const step=Math.max(1,Math.ceil(dias/4)), top=step*Math.ceil(dias/step)*864e5;
+  const Y=v=>T+ih-v/top*ih, bw=iw/12;
+  let g=""; for(let v=0;v<=top;v+=step*864e5) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v/864e5}d</text>`;
+  const bars=meses.map((q,i)=>{ if(!q.n) return ""; const a=q.s/q.n, x=L+i*bw+bw*.18, w=bw*.64, y=Y(a), h=Math.max(2,T+ih-y);
+    return `<g><title>${nm[q.m]}/${q.y}: média ${durC(a)} em ${q.n} OS</title><path d="M${x} ${T+ih}V${y+3}a3 3 0 0 1 3-3h${w-6}a3 3 0 0 1 3 3V${T+ih}Z" fill="${pzUnico&&a>pzUnico?"var(--p-urg)":"var(--accent)"}"/></g>`; }).join("");
+  const lbl=meses.map((q,i)=>i%2===1||i===11?`<text x="${L+i*bw+bw/2}" y="${H-8}" text-anchor="middle">${nm[q.m]}/${String(q.y).slice(2)}</text>`:"").join("");
+  const pzLine=pzUnico?`<line x1="${L}" x2="${W-R}" y1="${Y(pzUnico)}" y2="${Y(pzUnico)}" stroke="var(--p-urg)" stroke-width="1.5"/><text x="${L+4}" y="${Y(pzUnico)-5}" text-anchor="start" style="fill:var(--p-urg)">prazo ${durC(pzUnico)}</text>`:"";
+  const mesTab=`<div class="mtab"><table><thead><tr><th>Mês</th><th>OS</th><th>Média</th></tr></thead><tbody>${meses.slice().reverse().filter(q=>q.n).map(q=>`<tr><td>${nm[q.m]}/${q.y}</td><td>${q.n}</td><td>${durC(q.s/q.n)}</td></tr>`).join("")}</tbody></table></div>`;
+  // por prioridade
+  const porPrio=PRIO.slice().reverse().map(p=>{ const a=conc.filter(o=>o.prioridade===p.k); if(!a.length) return null; const v=a.reduce((s,o)=>s+elapsed(o),0)/a.length, pz=limiteHoras({prioridade:p.k})*36e5;
+    return {n:p.n,v,pz,late:v>pz,lbl:`${durC(v)} <small>· ${a.length}</small>`,tip:`média ${durC(v)} em ${a.length} OS; prazo ${durC(pz)}`}; }).filter(Boolean);
+  // faixas
+  const fx=[["Até 1 dia",0,1],["1 a 3 dias",1,3],["3 a 5 dias",3,5],["5 a 10 dias",5,10],["Mais de 10 dias",10,1e9]].map(([n,a,b])=>{ const c=conc.filter(o=>{const d=elapsed(o)/864e5; return d>=a&&d<b;}).length; return {n,v:c,lbl:`${c} <small>· ${Math.round(c/conc.length*100)}%</small>`,tip:`${c} OS`}; });
+  // por grupo
+  const grupo=k=>{ const m={}; conc.forEach(o=>{ const g=(o[k]||"Não informado").trim(); (m[g]=m[g]||[]).push(elapsed(o)); });
+    return Object.entries(m).map(([n,a])=>{ const v=a.reduce((x,y)=>x+y,0)/a.length; return {n,v,c:a.length,lbl:`${durC(v)} <small>· ${a.length}</small>`,tip:`média ${durC(v)} em ${a.length} OS`}; }).sort((a,b)=>b.c-a.c||b.v-a.v).slice(0,8).sort((a,b)=>b.v-a.v); };
+  const lentas=conc.slice().sort((a,b)=>elapsed(b)-elapsed(a)).slice(0,5);
+  const sec=(t,sub,body)=>`<div class="panel est-sec"><div class="h2s"><h2 style="margin:0">${t}</h2>${sub?`<span class="sub">${sub}</span>`:""}</div>${body}</div>`;
+  return `<div class="stack">${head}
+  <div class="tiles">
+    ${tile("Tempo médio",durC(media),`${conc.length} OS concluídas`)}
+    ${tile("Mediana",durC(mediana(t)),"metade fecha em até")}
+    ${tile("No prazo",pct+"%",`${noPrazo} de ${conc.length} OS`,pct<70?' style="border-color:var(--p-urg)"':"")}
+    ${tile("Mais rápida",durC(Math.min(...t)),"")}
+    ${tile("Mais demorada",durC(Math.max(...t)),"")}
+    ${tile("Em aberto agora",String(abertas.length),abertas.length?`idade média ${durC(idade)}`:"")}
+  </div>
+  ${sec("Tempo médio por mês","últimos 12 meses, pelo mês de conclusão",`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tempo médio de fechamento por mês">${g}${bars}${pzLine}${lbl}</svg>
+    <div class="legend"><span><span class="sd" style="background:var(--accent)"></span>Dentro do prazo</span>${pzUnico?`<span><span class="sd" style="background:var(--p-urg)"></span>Acima do prazo</span>`:""}</div>${mesTab}`)}
+  ${sec("Por prioridade","média · nº de OS",hbars(porPrio)+`<div class="legend" style="margin-top:6px"><span><span class="pz"></span>Prazo da prioridade</span></div>`)}
+  ${sec("Quanto tempo leva para fechar","nº de OS · % do total",hbars(fx))}
+  ${sec("Por setor","média · nº de OS",hbars(grupo("setor")))}
+  ${sec("Por equipamento","média · nº de OS",hbars(grupo("equipamento")))}
+  ${sec("Mais demoradas","",lentas.map(x=>`<button class="gitem" data-open="${esc(x.id)}"><span class="num">${esc(x.numero||"s/ nº")}</span><span class="d">${esc(x.equipamento||"")} · ${esc(x.setor||"")}</span><b style="white-space:nowrap;font-variant-numeric:tabular-nums">${durC(elapsed(x))}</b></button>`).join(""))}
+  </div>`;
+}
+
 function vRec(){
   const lim=Date.now()-periodo*864e5, g={};
   ordens.forEach(o=>{const d=new Date(o.recebimento||o.abertura); if(isNaN(d)||d<lim) return;
@@ -544,6 +624,7 @@ function bind(){
   app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{filt[b.dataset.f]=b.dataset.v; render();});
   app.querySelectorAll("[data-zoom]").forEach(b=>b.onclick=()=>abrirZoom(b.dataset.zoom));
   app.querySelectorAll("[data-per]").forEach(b=>b.onclick=()=>{periodo=+b.dataset.per; render();});
+  app.querySelectorAll("[data-eper]").forEach(b=>b.onclick=()=>{estPer=+b.dataset.eper; render();});
   const q=document.getElementById("q"); if(q){ q.oninput=()=>{filt.q=q.value; const pos=q.selectionStart; render(); const n=document.getElementById("q"); n.focus(); n.setSelectionRange(pos,pos);}; }
   const exp=document.getElementById("exp"); if(exp) exp.onclick=exportCSV;
   const form=document.getElementById("form");
