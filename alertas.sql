@@ -84,7 +84,7 @@ begin
 
   for o in
     select x.*,
-           now() - coalesce(x.recebimento, x.abertura) as idade,
+           now() - coalesce(x.recebimento, x.abertura) - make_interval(secs => coalesce(x.espera_pecas_seg, 0)) as idade,  -- tempo de compra não conta
            case x.prioridade when 'urgente' then c.horas_urgente
                              when 'alta'    then c.horas_alta
                              when 'baixa'   then c.horas_baixa
@@ -101,7 +101,7 @@ begin
         o.equipamento || ' · ' || o.setor
           || coalesce(' · ' || nullif(o.localizacao, ''), '')
           || coalesce(' · Ramal ' || nullif(o.ramal, ''), '') || E'\n'
-          || 'Sem finalizar há ' || public.tecos_fmt(o.idade)
+          || 'Em atendimento há ' || public.tecos_fmt(o.idade)
           || ' (prazo ' || case o.prioridade when 'urgente' then 'urgente' when 'alta' then 'alta'
                                              when 'baixa' then 'baixa' else 'média' end
           || ': ' || public.tecos_fmt(make_interval(hours => o.limite)) || ')' || E'\n'

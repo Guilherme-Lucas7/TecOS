@@ -106,6 +106,7 @@ button.tile:hover{border-color:var(--accent)}
   background:var(--p-urg-bg);color:var(--p-urg);border:1px solid var(--p-urg);border-radius:16px;padding:14px 16px;font:inherit}
 .atraso small{color:var(--fg);opacity:.8;font-size:13px}
 .atraso .go{font-weight:700;white-space:nowrap}
+.timer.pausa{border-color:var(--s-pecas);color:var(--s-pecas)}
 .timer.old{background:var(--p-urg-bg);border-color:var(--p-urg);color:var(--p-urg)}
 .timer{margin-left:auto;font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--fg)}
 
@@ -253,7 +254,7 @@ html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:10
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 </body>
 </html>
-<script src="config.js?v=10"></script>
+<script src="config.js?v=11"></script>
 </body>
 </html>
 <script>
@@ -288,7 +289,7 @@ function dur(ms){ if(!(ms>0)) return "0m"; const m=Math.floor(ms/60000), d=Math.
 function limiteHoras(o){ return ({urgente:alerta.horas_urgente,alta:alerta.horas_alta,baixa:alerta.horas_baixa})[o.prioridade]||alerta.horas_media; }
 function esperaPeca(o){ const base=(+o.espera_pecas_seg||0)*1000; return o.status==="pecas"&&o.pecas_desde?base+Math.max(0,Date.now()-new Date(o.pecas_desde)):base; }
 function tecnico(o){ return Math.max(0,elapsed(o)-esperaPeca(o)); }
-function atrasada(o){ return o.status!=="concluida"&&o.status!=="pecas"&&elapsed(o)>limiteHoras(o)*36e5; }
+function atrasada(o){ return o.status!=="concluida"&&o.status!=="pecas"&&tecnico(o)>limiteHoras(o)*36e5; }
 function elapsed(o){ const ini=new Date(o.recebimento||o.abertura); if(isNaN(ini)) return 0; const fim=o.status==="concluida"&&o.conclusao?new Date(o.conclusao):new Date(); return fim-ini; }
 function pill(def){ return def?`<span class="pill" style="color:${def.c};background:${def.bg}"><span class="sd" style="background:${def.c}"></span>${esc(def.n)}</span>`:""; }
 function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.append(t); setTimeout(()=>t.remove(),2600); }
@@ -348,7 +349,7 @@ function render(){
 function vDash(){
   const c=k=>ordens.filter(o=>o.status===k).length;
   const conc=ordens.filter(o=>o.status==="concluida"&&o.conclusao);
-  const media=conc.length?conc.reduce((a,o)=>a+elapsed(o),0)/conc.length:0;
+  const media=conc.length?conc.reduce((a,o)=>a+tecnico(o),0)/conc.length:0;
   const tile=(k,lbl,v,dot)=>`<button class="tile" data-filter="${k}"><div class="k">${dot?`<span class="sd" style="background:${dot}"></span>`:""}${lbl}</div><div class="v">${v}</div></button>`;
   return `<div class="stack">
   <div><div class="eyebrow">Painel</div><h1>Visão geral das OS</h1></div>
@@ -362,7 +363,7 @@ function vDash(){
     ${tile("manutencao","Em manutenção",c("manutencao"),S.manutencao.c)}
     <button class="tile" data-go="compras"><div class="k"><span class="sd" style="background:${S.pecas.c}"></span>Aguard. peças</div><div class="v">${c("pecas")}</div><div class="h" style="color:var(--accent-text);font-weight:600">Ver compras →</div></button>
     ${tile("concluida","Concluídas",c("concluida"),S.concluida.c)}
-    <button class="tile" data-go="estatisticas"><div class="k">Tempo médio</div><div class="v sm">${durC(media)}</div><div class="h">recebimento → conclusão (${conc.length} OS)</div><div class="h" style="color:var(--accent-text);font-weight:600;margin-top:4px">Ver estatísticas →</div></button>
+    <button class="tile" data-go="estatisticas"><div class="k">Tempo médio</div><div class="v sm">${durC(media)}</div><div class="h">de atendimento, sem a compra (${conc.length} OS)</div><div class="h" style="color:var(--accent-text);font-weight:600;margin-top:4px">Ver estatísticas →</div></button>
   </div>
   ${(()=>{ const ag=ordens.filter(o=>o.status==="pecas"); if(!ag.length&&!ordens.some(o=>o.pedido_peca_em)) return "";
     const hoje=new Date(); hoje.setHours(0,0,0,0); const venc=ag.filter(o=>o.previsao_peca&&new Date(o.previsao_peca+"T00:00:00")<hoje).length;
@@ -421,7 +422,7 @@ function card(o){
     <div class="t"><span class="num">${esc(o.numero||"s/ nº")}</span>${pill(S[o.status])}</div>
     <div class="eq">${esc(o.equipamento||"Equipamento não informado")}</div>
     ${o.descricao?`<div class="ds">${esc(o.descricao)}</div>`:""}
-    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${atrasada(o)?" old":""}">${atrasada(o)?"Atrasada · ":"⏱ "}${dur(elapsed(o))}</span></div>
+    <div class="b">${pill(P[o.prioridade])}<span>${esc([o.setor,o.localizacao].filter(Boolean).join(" · "))}</span>${o.patrimonio?`<span class="num">PAT ${esc(o.patrimonio)}</span>`:""}<span class="timer${atrasada(o)?" old":""}${o.status==="pecas"?" pausa":""}" title="${o.status==="pecas"?"Tempo de atendimento parado enquanto espera a peça":"Tempo de atendimento"}">${atrasada(o)?"Atrasada · ":o.status==="pecas"?"⏸ ":"⏱ "}${dur(tecnico(o))}</span></div>
     ${o.status==="pecas"?`<div class="dates" style="color:var(--s-pecas)">Aguardando peça${o.peca_necessaria?": "+esc(o.peca_necessaria):""}${o.pecas_desde?" · há "+durC(Date.now()-new Date(o.pecas_desde)):""}</div>`:""}
     ${o.solicitante||o.ramal?`<div class="dates">${o.solicitante?"Solicitante: "+esc(o.solicitante):""}${o.solicitante&&o.ramal?" · ":""}${o.ramal?"Ramal "+esc(o.ramal):""}</div>`:""}
     <div class="dates">Recebida ${fmtDate(o.recebimento||o.abertura)}${o.status==="concluida"&&o.conclusao?" · Concluída "+fmtDate(o.conclusao):""}</div>
@@ -467,12 +468,12 @@ function vForm(){
       ${f("peca_necessaria","Peça necessária",1,"text",'placeholder="Ex.: bateria 12V 7Ah, sensor SpO2"')}
       <div class="two">${f("pedido_compra","Nº do pedido / solicitação",0)}${f("previsao_peca","Previsão de chegada",0,"date")}</div>
       ${o.pecas_desde?`<div class="hint">Aguardando desde ${fmtDate(o.pecas_desde)} (${durC(Date.now()-new Date(o.pecas_desde))})</div>`:""}</div>`:""}
-    ${esperaPeca(o)>0&&o.status!=="pecas"?`<div class="hint">Esperou peça por ${durC(esperaPeca(o))}${o.peca_necessaria?" ("+esc(o.peca_necessaria)+")":""}.</div>`:""}
+    ${esperaPeca(o)>0&&o.status!=="pecas"?`<div class="hint">Passou por compra${o.peca_necessaria?" ("+esc(o.peca_necessaria)+")":""}: ${durC(esperaPeca(o))} esperando a peça.</div>`:""}
     ${t("diagnostico","Diagnóstico técnico")}
     ${t("servico","Serviço realizado")}
     ${f("pecas","Peças utilizadas",0,"text",'placeholder="Ex.: sensor SpO2, bateria 12V"')}
     ${f("conclusao","Data de conclusão",0,"datetime-local")}
-    <div class="field"><label>Tempo decorrido</label><div class="elapsed" id="el">${dur(elapsed(o))}</div></div>
+    <div class="field"><label>Tempo de atendimento${o.status==="pecas"?" (parado na compra)":""}</label><div class="elapsed" id="el">${dur(tecnico(o))}</div>${esperaPeca(o)>0?`<div class="hint">Tempo de compra: ${durC(esperaPeca(o))} · total ${durC(elapsed(o))}</div>`:""}</div>
   </fieldset>
   <div id="ferr" class="confirm" hidden></div>
   <div class="savebar"><button class="btn pri full" type="submit" ${!canWrite?"disabled":""}>${ed?"Salvar alterações":"Cadastrar OS"}</button></div>
@@ -499,28 +500,66 @@ function vScan(){
 let estPer=180;
 function durC(ms){ if(!(ms>0)) return "—"; const m=Math.round(ms/6e4), d=Math.floor(m/1440), h=Math.floor(m%1440/60), mm=m%60; return d?`${d}d ${h}h`:h?`${h}h ${mm}m`:`${mm}m`; }
 function mediana(a){ if(!a.length) return 0; const b=a.slice().sort((x,y)=>x-y), k=b.length>>1; return b.length%2?b[k]:(b[k-1]+b[k])/2; }
-function hbars(rows,{max,prazo}={}){
+function hbars(rows,{max,prazo,cor}={}){
   const mx=max||Math.max(1,...rows.map(r=>Math.max(r.v,r.pz||0)));
-  return `<div class="hb">${rows.map(r=>`<div class="hbrow" title="${esc(r.n)}: ${esc(r.tip||"")}"><span class="n">${esc(r.n)}</span><div class="bartrack"><div class="barfill${r.late?" late":""}" style="width:${Math.max(2,r.v/mx*100)}%"></div>${r.pz?`<span class="prazo" style="left:calc(${Math.min(100,r.pz/mx*100)}% - 1px)"></span>`:""}</div><span class="val">${r.lbl}</span></div>`).join("")}</div>`;
+  return `<div class="hb">${rows.map(r=>`<div class="hbrow" title="${esc(r.n)}: ${esc(r.tip||"")}"><span class="n">${esc(r.n)}</span><div class="bartrack"><div class="barfill${r.late?" late":""}" style="width:${Math.max(2,r.v/mx*100)}%${cor&&!r.late?";background:"+cor:""}"></div>${r.pz?`<span class="prazo" style="left:calc(${Math.min(100,r.pz/mx*100)}% - 1px)"></span>`:""}</div><span class="val">${r.lbl}</span></div>`).join("")}</div>`;
+}
+function barrasMes(itens,{pz=0,cor="var(--accent)",rot="Média"}={}){
+  const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"], now=new Date(), meses=[];
+  for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); meses.push({y:d.getFullYear(),m:d.getMonth(),s:0,n:0}); }
+  itens.forEach(({d,v})=>{ const x=meses.find(q=>q.y===d.getFullYear()&&q.m===d.getMonth()); if(x){ x.s+=v; x.n++; } });
+  const W=340,H=190,L=34,R=8,T=16,B=26, iw=W-L-R, ih=H-T-B;
+  const mxv=Math.max(pz,...meses.map(q=>q.n?q.s/q.n:0),864e5), dias=Math.ceil(mxv/864e5), step=Math.max(1,Math.ceil(dias/4)), top=step*Math.ceil(dias/step)*864e5;
+  const Y=v=>T+ih-v/top*ih, bw=iw/12;
+  let g=""; for(let v=0;v<=top;v+=step*864e5) g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-dasharray="3 3"/><text x="${L-6}" y="${Y(v)+4}" text-anchor="end">${v/864e5}d</text>`;
+  const bars=meses.map((q,i)=>{ if(!q.n) return ""; const a=q.s/q.n, x=L+i*bw+bw*.18, w=bw*.64, y=Y(a);
+    return `<g><title>${nm[q.m]}/${q.y}: média ${durC(a)} em ${q.n} OS</title><path d="M${x} ${T+ih}V${y+3}a3 3 0 0 1 3-3h${w-6}a3 3 0 0 1 3 3V${T+ih}Z" fill="${pz&&a>pz?"var(--p-urg)":cor}"/></g>`; }).join("");
+  const lbl=meses.map((q,i)=>i%2===1||i===11?`<text x="${L+i*bw+bw/2}" y="${H-8}" text-anchor="middle">${nm[q.m]}/${String(q.y).slice(2)}</text>`:"").join("");
+  const pzl=pz?`<line x1="${L}" x2="${W-R}" y1="${Y(pz)}" y2="${Y(pz)}" stroke="var(--p-urg)" stroke-width="1.5"/><text x="${L+4}" y="${Y(pz)-5}" style="fill:var(--p-urg)">prazo ${durC(pz)}</text>`:"";
+  const tab=`<div class="mtab"><table><thead><tr><th>Mês</th><th>OS</th><th>${rot}</th></tr></thead><tbody>${meses.slice().reverse().filter(q=>q.n).map(q=>`<tr><td>${nm[q.m]}/${q.y}</td><td>${q.n}</td><td>${durC(q.s/q.n)}</td></tr>`).join("")}</tbody></table></div>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img">${g}${bars}${pzl}${lbl}</svg>${tab}`;
+}
+function estCompras(lim){
+  const ped=o=>new Date(o.pedido_peca_em||o.pecas_desde||o.recebimento||0);
+  const feitas=ordens.filter(o=>o.status!=="pecas"&&(+o.espera_pecas_seg||0)>0&&ped(o).getTime()>=lim);
+  const andam=ordens.filter(o=>o.status==="pecas");
+  const sec=(t,sub,body)=>`<div class="panel est-sec"><div class="h2s"><h2 style="margin:0">${t}</h2>${sub?`<span class="sub">${sub}</span>`:""}</div>${body}</div>`;
+  const cab=`<div style="margin-top:12px"><div class="eyebrow" style="color:var(--s-pecas)">Compra de peças</div><h2 style="font-size:24px;margin:2px 0 4px">Tempo de compra</h2><p class="lead" style="margin:0">Do envio para compra até a peça chegar (botão <b>Peça chegou</b>), nos pedidos feitos no período.</p></div>`;
+  if(!feitas.length&&!andam.length) return cab+`<div class="empty">Nenhuma compra de peça no período.</div>`;
+  const t=feitas.map(esperaPeca), med=t.length?t.reduce((a,b)=>a+b,0)/t.length:0;
+  const espA=andam.length?andam.reduce((a,o)=>a+esperaPeca(o),0)/andam.length:0;
+  const comPrev=feitas.filter(o=>o.previsao_peca), cumpr=comPrev.filter(o=>ped(o).getTime()+esperaPeca(o)<=new Date(o.previsao_peca+"T23:59:59").getTime()).length;
+  const tile=(k,v,h)=>`<div class="tile" style="border-color:color-mix(in srgb,var(--s-pecas) 45%,var(--line))"><div class="k">${k}</div><div class="v sm">${v}</div>${h?`<div class="h">${h}</div>`:""}</div>`;
+  const porPeca=(()=>{ const m={}; feitas.forEach(o=>{ const g=(o.peca_necessaria||"Não informada").trim(); (m[g]=m[g]||[]).push(esperaPeca(o)); });
+    return Object.entries(m).map(([n,a])=>{ const v=a.reduce((x,y)=>x+y,0)/a.length; return {n,v,c:a.length,lbl:`${durC(v)} <small>· ${a.length}</small>`,tip:`média ${durC(v)} em ${a.length} compras`}; }).sort((a,b)=>b.c-a.c||b.v-a.v).slice(0,8).sort((a,b)=>b.v-a.v); })();
+  return cab+`<div class="tiles">
+    ${tile("Tempo médio de compra",feitas.length?durC(med):"—",`${feitas.length} compra${feitas.length===1?"":"s"} concluída${feitas.length===1?"":"s"}`)}
+    ${tile("Mediana",feitas.length?durC(mediana(t)):"—","metade chega em até")}
+    ${tile("Mais demorada",feitas.length?durC(Math.max(...t)):"—","")}
+    ${tile("Em compra agora",String(andam.length),andam.length?`esperando há ${durC(espA)} em média`:"")}
+    ${comPrev.length?tile("Previsão cumprida",Math.round(cumpr/comPrev.length*100)+"%",`${cumpr} de ${comPrev.length} com previsão`):""}
+  </div>
+  ${feitas.length?sec("Tempo médio de compra por mês","pelo mês do pedido",barrasMes(feitas.map(o=>({d:ped(o),v:esperaPeca(o)})),{cor:"var(--s-pecas)",rot:"Compra"})):""}
+  ${porPeca.length?sec("Por peça","média · nº de compras",hbars(porPeca,{cor:"var(--s-pecas)"})):""}`;
 }
 function vEst(){
   const agora=Date.now(), lim=estPer?agora-estPer*864e5:0;
-  const todas=ordens.filter(o=>o.status==="concluida"&&o.conclusao&&!isNaN(new Date(o.conclusao))&&elapsed(o)>0);
+  const todas=ordens.filter(o=>o.status==="concluida"&&o.conclusao&&!isNaN(new Date(o.conclusao))&&tecnico(o)>0);
   const conc=todas.filter(o=>new Date(o.conclusao).getTime()>=lim);
-  const t=conc.map(elapsed), soma=t.reduce((a,b)=>a+b,0), media=t.length?soma/t.length:0;
+  const t=conc.map(tecnico), soma=t.reduce((a,b)=>a+b,0), media=t.length?soma/t.length:0;
   const noPrazo=conc.filter(o=>tecnico(o)<=limiteHoras(o)*36e5).length;
-  const abertas=ordens.filter(o=>o.status!=="concluida"), idade=abertas.length?abertas.reduce((a,o)=>a+elapsed(o),0)/abertas.length:0;
+  const abertas=ordens.filter(o=>o.status!=="concluida"), idade=abertas.length?abertas.reduce((a,o)=>a+tecnico(o),0)/abertas.length:0;
   const per=[[30,"30 dias"],[90,"90 dias"],[180,"6 meses"],[365,"1 ano"],[0,"Tudo"]];
-  const head=`<div><div class="eyebrow">Estatísticas</div><h1>Tempo de fechamento das OS</h1><p class="lead">Tempo entre o recebimento pelo técnico e a conclusão, nas OS concluídas no período.</p></div>
+  const head=`<div><div class="eyebrow">Estatísticas</div><h1>Tempo de fechamento das OS</h1><p class="lead"><b>Atendimento</b>: do recebimento à conclusão, com o relógio parado enquanto a OS espera peça. A <b>compra de peças</b> tem estatística própria, mais abaixo.</p></div>
   <div class="chips">${per.map(([d,n])=>`<button class="chip" data-eper="${d}" aria-pressed="${estPer===d}">${n}</button>`).join("")}</div>`;
   if(!conc.length) return `<div class="stack">${head}<div class="empty"><b>Nenhuma OS concluída neste período.</b><br>Ao concluir uma OS, informe a <b>data de conclusão</b>; ela entra aqui automaticamente.${todas.length?"<br>Escolha um período maior para ver as OS mais antigas.":""}</div>
-  ${abertas.length?`<div class="tiles"><div class="tile"><div class="k">Em aberto agora</div><div class="v">${abertas.length}</div><div class="h">idade média ${durC(idade)}</div></div></div>`:""}</div>`;
+  ${abertas.length?`<div class="tiles"><div class="tile"><div class="k">Em aberto agora</div><div class="v">${abertas.length}</div><div class="h">idade média ${durC(idade)}</div></div></div>`:""}${estCompras(lim)}</div>`;
   const pct=Math.round(noPrazo/conc.length*100);
   const tile=(k,v,h,extra="")=>`<div class="tile"${extra}><div class="k">${k}</div><div class="v sm">${v}</div>${h?`<div class="h">${h}</div>`:""}</div>`;
   // por mês (12 meses, sempre)
   const nm=["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"], now=new Date(), meses=[];
   for(let i=11;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); meses.push({y:d.getFullYear(),m:d.getMonth(),s:0,n:0}); }
-  todas.forEach(o=>{ const d=new Date(o.conclusao), x=meses.find(q=>q.y===d.getFullYear()&&q.m===d.getMonth()); if(x){ x.s+=elapsed(o); x.n++; } });
+  todas.forEach(o=>{ const d=new Date(o.conclusao), x=meses.find(q=>q.y===d.getFullYear()&&q.m===d.getMonth()); if(x){ x.s+=tecnico(o); x.n++; } });
   const pzs=[alerta.horas_urgente,alerta.horas_alta,alerta.horas_media,alerta.horas_baixa], pzUnico=pzs.every(v=>v===pzs[0])?pzs[0]*36e5:0;
   const W=340,H=190,L=34,R=8,T=16,B=26, iw=W-L-R, ih=H-T-B;
   const mxv=Math.max(pzUnico,...meses.map(q=>q.n?q.s/q.n:0),864e5); const dias=Math.ceil(mxv/864e5); const step=Math.max(1,Math.ceil(dias/4)), top=step*Math.ceil(dias/step)*864e5;
@@ -532,24 +571,24 @@ function vEst(){
   const pzLine=pzUnico?`<line x1="${L}" x2="${W-R}" y1="${Y(pzUnico)}" y2="${Y(pzUnico)}" stroke="var(--p-urg)" stroke-width="1.5"/><text x="${L+4}" y="${Y(pzUnico)-5}" text-anchor="start" style="fill:var(--p-urg)">prazo ${durC(pzUnico)}</text>`:"";
   const mesTab=`<div class="mtab"><table><thead><tr><th>Mês</th><th>OS</th><th>Média</th></tr></thead><tbody>${meses.slice().reverse().filter(q=>q.n).map(q=>`<tr><td>${nm[q.m]}/${q.y}</td><td>${q.n}</td><td>${durC(q.s/q.n)}</td></tr>`).join("")}</tbody></table></div>`;
   // por prioridade
-  const porPrio=PRIO.slice().reverse().map(p=>{ const a=conc.filter(o=>o.prioridade===p.k); if(!a.length) return null; const v=a.reduce((s,o)=>s+elapsed(o),0)/a.length, pz=limiteHoras({prioridade:p.k})*36e5;
+  const porPrio=PRIO.slice().reverse().map(p=>{ const a=conc.filter(o=>o.prioridade===p.k); if(!a.length) return null; const v=a.reduce((s,o)=>s+tecnico(o),0)/a.length, pz=limiteHoras({prioridade:p.k})*36e5;
     return {n:p.n,v,pz,late:v>pz,lbl:`${durC(v)} <small>· ${a.length}</small>`,tip:`média ${durC(v)} em ${a.length} OS; prazo ${durC(pz)}`}; }).filter(Boolean);
   // faixas
-  const fx=[["Até 1 dia",0,1],["1 a 3 dias",1,3],["3 a 5 dias",3,5],["5 a 10 dias",5,10],["Mais de 10 dias",10,1e9]].map(([n,a,b])=>{ const c=conc.filter(o=>{const d=elapsed(o)/864e5; return d>=a&&d<b;}).length; return {n,v:c,lbl:`${c} <small>· ${Math.round(c/conc.length*100)}%</small>`,tip:`${c} OS`}; });
+  const fx=[["Até 1 dia",0,1],["1 a 3 dias",1,3],["3 a 5 dias",3,5],["5 a 10 dias",5,10],["Mais de 10 dias",10,1e9]].map(([n,a,b])=>{ const c=conc.filter(o=>{const d=tecnico(o)/864e5; return d>=a&&d<b;}).length; return {n,v:c,lbl:`${c} <small>· ${Math.round(c/conc.length*100)}%</small>`,tip:`${c} OS`}; });
   // por grupo
-  const grupo=k=>{ const m={}; conc.forEach(o=>{ const g=(o[k]||"Não informado").trim(); (m[g]=m[g]||[]).push(elapsed(o)); });
+  const grupo=k=>{ const m={}; conc.forEach(o=>{ const g=(o[k]||"Não informado").trim(); (m[g]=m[g]||[]).push(tecnico(o)); });
     return Object.entries(m).map(([n,a])=>{ const v=a.reduce((x,y)=>x+y,0)/a.length; return {n,v,c:a.length,lbl:`${durC(v)} <small>· ${a.length}</small>`,tip:`média ${durC(v)} em ${a.length} OS`}; }).sort((a,b)=>b.c-a.c||b.v-a.v).slice(0,8).sort((a,b)=>b.v-a.v); };
-  const lentas=conc.slice().sort((a,b)=>elapsed(b)-elapsed(a)).slice(0,5);
+  const lentas=conc.slice().sort((a,b)=>tecnico(b)-tecnico(a)).slice(0,5);
   const sec=(t,sub,body)=>`<div class="panel est-sec"><div class="h2s"><h2 style="margin:0">${t}</h2>${sub?`<span class="sub">${sub}</span>`:""}</div>${body}</div>`;
   return `<div class="stack">${head}
   <div class="tiles">
-    ${tile("Tempo médio",durC(media),`${conc.length} OS concluídas`)}
+    ${tile("Atendimento médio",durC(media),`${conc.length} OS concluídas`)}
     ${tile("Mediana",durC(mediana(t)),"metade fecha em até")}
     ${tile("No prazo",pct+"%",`${noPrazo} de ${conc.length} OS`,pct<70?' style="border-color:var(--p-urg)"':"")}
     ${tile("Mais rápida",durC(Math.min(...t)),"")}
     ${tile("Mais demorada",durC(Math.max(...t)),"")}
     ${tile("Em aberto agora",String(abertas.length),abertas.length?`idade média ${durC(idade)}`:"")}
-    ${(()=>{ const ce=conc.filter(o=>esperaPeca(o)>0); return ce.length?tile("Esperando peça",durC(ce.reduce((a,o)=>a+esperaPeca(o),0)/ce.length),`média em ${ce.length} OS que precisaram de peça`)+tile("Sem contar a peça",durC(conc.reduce((a,o)=>a+tecnico(o),0)/conc.length),"tempo médio de trabalho"):""; })()}
+    ${(()=>{ const ce=conc.filter(o=>esperaPeca(o)>0); return ce.length?tile("Tempo total médio",durC(conc.reduce((a,o)=>a+elapsed(o),0)/conc.length),"atendimento + compra"):""; })()}
   </div>
   ${sec("Tempo médio por mês","últimos 12 meses, pelo mês de conclusão",`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Tempo médio de fechamento por mês">${g}${bars}${pzLine}${lbl}</svg>
     <div class="legend"><span><span class="sd" style="background:var(--accent)"></span>Dentro do prazo</span>${pzUnico?`<span><span class="sd" style="background:var(--p-urg)"></span>Acima do prazo</span>`:""}</div>${mesTab}`)}
@@ -557,7 +596,8 @@ function vEst(){
   ${sec("Quanto tempo leva para fechar","nº de OS · % do total",hbars(fx))}
   ${sec("Por setor","média · nº de OS",hbars(grupo("setor")))}
   ${sec("Por equipamento","média · nº de OS",hbars(grupo("equipamento")))}
-  ${sec("Mais demoradas","",lentas.map(x=>`<button class="gitem" data-open="${esc(x.id)}"><span class="num">${esc(x.numero||"s/ nº")}</span><span class="d">${esc(x.equipamento||"")} · ${esc(x.setor||"")}</span><b style="white-space:nowrap;font-variant-numeric:tabular-nums">${durC(elapsed(x))}</b></button>`).join(""))}
+  ${sec("Mais demoradas","",lentas.map(x=>`<button class="gitem" data-open="${esc(x.id)}"><span class="num">${esc(x.numero||"s/ nº")}</span><span class="d">${esc(x.equipamento||"")} · ${esc(x.setor||"")}</span><b style="white-space:nowrap;font-variant-numeric:tabular-nums">${durC(tecnico(x))}</b></button>`).join(""))}
+  ${estCompras(lim)}
   </div>`;
 }
 
@@ -689,7 +729,7 @@ function bind(){
       const ant=ordens.filter(x=>x.ramal&&String(x.setor||"").trim().toLowerCase()===st).sort((a,b)=>(lc&&String(b.localizacao||"").trim().toLowerCase()===lc)-(lc&&String(a.localizacao||"").trim().toLowerCase()===lc)||new Date(b.abertura||0)-new Date(a.abertura||0))[0];
       if(ant){ r.value=ant.ramal; draft.ramal=ant.ramal; } };
     ["f-setor","f-localizacao"].forEach(id=>document.getElementById(id)?.addEventListener("change",sugereRamal));
-    form.querySelectorAll("input,textarea").forEach(el=>{ el.oninput=el.onchange=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(elapsed(draft)); okOld=false;}; });
+    form.querySelectorAll("input,textarea").forEach(el=>{ el.oninput=el.onchange=()=>{draft[el.name]=el.type==="datetime-local"?fromLocalInput(el.value):el.value; const e=document.getElementById("el"); if(e) e.textContent=dur(tecnico(draft)); okOld=false;}; });
     form.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{draft[b.dataset.set]=b.dataset.v;
       if(b.dataset.set==="status"&&b.dataset.v==="concluida"&&!draft.conclusao) draft.conclusao=new Date().toISOString();
       render();});
@@ -763,8 +803,8 @@ function go2form(){ document.querySelectorAll(".nav button").forEach(b=>b.setAtt
 
 /* ---------- exportar ---------- */
 async function exportCSV(){
-  const cols=[["numero","Nº OS"],["patrimonio","Patrimônio"],["abertura","Abertura"],["recebimento","Recebimento"],["setor","Setor"],["localizacao","Localização"],["solicitante","Solicitante"],["ramal","Ramal"],["equipamento","Equipamento"],["descricao","Descrição do problema"],["prioridade","Prioridade"],["status","Status"],["diagnostico","Diagnóstico"],["servico","Serviço realizado"],["pecas","Peças"],["conclusao","Conclusão"],["_tempo","Tempo decorrido"]];
-  const val=(o,k)=>k==="_tempo"?dur(elapsed(o)):k==="status"?S[o.status]?.n:k==="prioridade"?P[o.prioridade]?.n:["abertura","recebimento","conclusao"].includes(k)?(o[k]?fmtDate(o[k]):""):o[k];
+  const cols=[["numero","Nº OS"],["patrimonio","Patrimônio"],["abertura","Abertura"],["recebimento","Recebimento"],["setor","Setor"],["localizacao","Localização"],["solicitante","Solicitante"],["ramal","Ramal"],["equipamento","Equipamento"],["descricao","Descrição do problema"],["prioridade","Prioridade"],["status","Status"],["diagnostico","Diagnóstico"],["servico","Serviço realizado"],["pecas","Peças"],["conclusao","Conclusão"],["_tempo","Tempo de atendimento"],["_compra","Tempo de compra"],["_total","Tempo total"]];
+  const val=(o,k)=>k==="_tempo"?dur(tecnico(o)):k==="_compra"?(esperaPeca(o)?dur(esperaPeca(o)):""):k==="_total"?dur(elapsed(o)):k==="status"?S[o.status]?.n:k==="prioridade"?P[o.prioridade]?.n:["abertura","recebimento","conclusao"].includes(k)?(o[k]?fmtDate(o[k]):""):o[k];
   const cell=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
   const csv="﻿"+[cols.map(c=>cell(c[1])).join(";"),...ordens.map(o=>cols.map(c=>cell(val(o,c[0]))).join(";"))].join("\r\n");
   const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
