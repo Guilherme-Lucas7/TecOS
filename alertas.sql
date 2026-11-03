@@ -9,6 +9,13 @@ create extension if not exists pg_cron;
 alter table public.ordens add column if not exists solicitante text;
 alter table public.ordens add column if not exists ramal text;
 
+-- Compra de peças: o que falta, pedido, previsão e quanto tempo a OS esperou pela peça.
+alter table public.ordens add column if not exists peca_necessaria text;
+alter table public.ordens add column if not exists pedido_compra text;
+alter table public.ordens add column if not exists previsao_peca date;
+alter table public.ordens add column if not exists pecas_desde timestamptz;
+alter table public.ordens add column if not exists espera_pecas_seg bigint not null default 0;
+
 -- Guarda quando cada OS recebeu o último alerta, para não repetir toda hora.
 alter table public.ordens add column if not exists ultimo_alerta timestamptz;
 
@@ -77,7 +84,7 @@ begin
                              when 'baixa'   then c.horas_baixa
                              else c.horas_media end as limite
       from public.ordens x
-     where x.status <> 'concluida'
+     where x.status not in ('concluida', 'pecas')  -- aguardando peça não conta como atraso do técnico
      order by coalesce(x.recebimento, x.abertura)
   loop
     if o.idade > make_interval(hours => o.limite)
